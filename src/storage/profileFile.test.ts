@@ -52,7 +52,7 @@ function profile(): CalibrationProfileV1 {
       lightnessGain: 0.01,
     },
     confidence: 0.8,
-    lut: { size: 2, data: [0, 0, 0, 1, 1, 1] },
+    lut: { size: 2, data: Array.from({ length: 24 }, () => 0.5) },
   }
 }
 
@@ -83,8 +83,16 @@ describe('profile files', () => {
 
     const incomplete = JSON.parse(exported)
     delete incomplete.payload.profile.rawTrials
+    // Re-sign so schema validation (not the checksum) is what rejects it.
+    const digest = await globalThis.crypto.subtle.digest(
+      'SHA-256',
+      new TextEncoder().encode(JSON.stringify(incomplete.payload)),
+    )
+    incomplete.checksum = Array.from(new Uint8Array(digest), (byte) =>
+      byte.toString(16).padStart(2, '0'),
+    ).join('')
     await expect(importProfileFile(JSON.stringify(incomplete))).rejects.toThrow(
-      /raw trials/i,
+      /rawTrials/,
     )
 
     const tampered = JSON.parse(exported)

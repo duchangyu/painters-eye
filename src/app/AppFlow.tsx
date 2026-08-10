@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createAdaptiveCalibrationSession } from '../calibration/adaptiveSession'
 import {
   assessQuickCheck,
@@ -98,13 +98,14 @@ export function AppFlow() {
     calibrationRun === 0 && calibrationDraft
       ? calibrationDraft.seed
       : 20260810 + calibrationRun
-  const calibrationSession = useMemo(() => {
+  const calibration = useMemo(() => {
     const session = createAdaptiveCalibrationSession({
         seed: calibrationSeed,
         ...(isE2eMode ? { trialsPerAxis: 1, repeatCount: 0 } : {}),
       })
+    let replayed: readonly TrialResponse[] | null = null
     if (calibrationRun === 0 && calibrationDraft) {
-      const replayed = calibrationDraft.responses
+      const results = calibrationDraft.responses
         .slice(0, calibrationDraft.completedTrials)
         .map((response) =>
           session.recordAnswer({
@@ -113,18 +114,26 @@ export function AppFlow() {
             reactionTimeMs: response.reactionTimeMs,
           }),
         )
-      if (replayed.some((response) => response === undefined)) {
-        // The schedule drifted from the draft (should not happen past the
-        // loader's id/version checks): drop the draft rather than fit on
-        // mismatched evidence.
-        clearCalibrationDraft()
-        responses.current = []
-      } else {
-        responses.current = replayed as TrialResponse[]
-      }
+      // A mismatch means the schedule drifted from the draft (should not
+      // happen past the loader's id/version checks): drop the draft rather
+      // than fit on mismatched evidence.
+      replayed = results.some((response) => response === undefined)
+        ? null
+        : (results as TrialResponse[])
     }
-    return session
+    return { session, replayed }
   }, [calibrationDraft, calibrationRun, calibrationSeed])
+  const calibrationSession = calibration.session
+  // Sync restored responses into the ref after render (refs must not be
+  // written during render). Runs before paint, so no answer can precede it.
+  useLayoutEffect(() => {
+    if (calibration.replayed) {
+      responses.current = [...calibration.replayed]
+    } else if (calibrationRun === 0 && calibrationDraft) {
+      clearCalibrationDraft()
+      responses.current = []
+    }
+  }, [calibration, calibrationDraft, calibrationRun])
   const schedule = calibrationSession.scheduledTrials
   const engine = useMemo<CalibrationEngine>(() => {
     return {
@@ -378,6 +387,12 @@ export function AppFlow() {
     const result = assessQuickCheck(activeProfile, quickCheckResponses.current)
     setQuickCheckResult(result)
     if (result.status !== 'pass') {
+      // Record the attempt even on failure: without a timestamp the next
+      // launch forces the same check again forever.
+      localStorage.setItem(
+        `color-master:quick-check:${activeProfile.id}`,
+        new Date().toISOString(),
+      )
       flow.showQuickCheckResult()
       return
     }
@@ -431,7 +446,23 @@ export function AppFlow() {
     }
     setActiveProfile(value)
     setOriginalOnly(false)
-    flow.restoreProfile(value.displayConditions, false)
+    // An imported profile must not bypass the display check: compare its
+    // fingerprint against the current display and route through a quick
+    // check whenever they differ (or the check is otherwise due).
+    const currentFingerprint = flow.displayConditions
+      ? createDisplayFingerprint(flow.displayConditions)
+      : null
+    const requirement = currentFingerprint
+      ? quickCheckRequirement({
+          profile: value,
+          currentDisplayFingerprint: currentFingerprint,
+          lastCheckedAt:
+            globalThis.window?.localStorage?.getItem(
+              `color-master:quick-check:${value.id}`,
+            ) ?? null,
+        })
+      : 'display-changed'
+    flow.restoreProfile(value.displayConditions, requirement !== 'not-due')
   }
 
   function openPersonalImage(file: File) {

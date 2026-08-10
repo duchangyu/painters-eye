@@ -3,6 +3,7 @@ import type {
   ProfileValidationSummary,
 } from '../domain/profile'
 import { migrateProfile } from './profileRepository'
+import { profileValidationSummarySchema } from './profileSchema'
 
 export type ValidationSummary = ProfileValidationSummary
 
@@ -57,9 +58,6 @@ export async function importProfileFile(value: string): Promise<ProfileFilePaylo
   if (!isRecord(parsed.payload) || !isRecord(parsed.payload.profile)) {
     throw new TypeError('Profile file payload is missing')
   }
-  if (!Array.isArray(parsed.payload.profile.rawTrials)) {
-    throw new TypeError('Profile file must contain raw trials')
-  }
   if (typeof parsed.checksum !== 'string') {
     throw new TypeError('Profile file checksum is missing')
   }
@@ -71,8 +69,8 @@ export async function importProfileFile(value: string): Promise<ProfileFilePaylo
 
   return {
     profile: migrateProfile(parsed.payload.profile),
-    validation: isRecord(parsed.payload.validation)
-      ? (parsed.payload.validation as unknown as ValidationSummary)
-      : { passed: false },
+    validation: profileValidationSummarySchema
+      .catch({ passed: false })
+      .parse(parsed.payload.validation),
   }
 }

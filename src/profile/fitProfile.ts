@@ -1,5 +1,4 @@
 import type {
-  ConfusionAxis,
   StaircaseState,
   TrialResponse,
 } from '../domain/calibration'

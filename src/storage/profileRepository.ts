@@ -4,15 +4,10 @@ import type {
 } from '../domain/calibration'
 import type { CalibrationProfileV1 } from '../domain/profile'
 import { openColorMasterDb, type ColorMasterDb } from './db'
+import { parseCalibrationProfile } from './profileSchema'
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
-}
-
-function assertRawTrials(value: Record<string, unknown>) {
-  if (!Array.isArray(value.rawTrials)) {
-    throw new TypeError('Profile must preserve raw trials')
-  }
 }
 
 export function createDisplayFingerprint(
@@ -31,19 +26,18 @@ export function migrateProfile(value: unknown): CalibrationProfileV1 {
     throw new TypeError('Profile must be an object')
   }
 
-  assertRawTrials(value)
   if (value.schemaVersion === 1) {
-    return value as unknown as CalibrationProfileV1
+    return parseCalibrationProfile(value)
   }
   if (value.schemaVersion === 0) {
-    return {
-      ...(value as unknown as CalibrationProfileV1),
+    return parseCalibrationProfile({
+      ...value,
       schemaVersion: 1,
       algorithmVersion:
         typeof value.algorithmVersion === 'string'
           ? value.algorithmVersion
           : 'migrated-v0',
-    }
+    })
   }
 
   throw new RangeError(`Unsupported profile schema: ${String(value.schemaVersion)}`)

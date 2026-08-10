@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { getMachadoMatrix } from '../color/machado'
 import type { Matrix3 } from '../color/matrix'
-import type { SrgbColor } from '../domain/calibration'
 import {
   AXIS_VECTORS,
   createStimulus,

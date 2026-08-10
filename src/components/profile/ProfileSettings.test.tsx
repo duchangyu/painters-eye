@@ -25,7 +25,27 @@ function profile(): CalibrationProfileV1 {
       recordedAt: '2026-08-10T00:00:00.000Z',
     },
     sourceSessionId: 'session-settings',
-    rawTrials: [],
+    rawTrials: [
+      {
+        id: 'trial-1',
+        stimulus: {
+          id: 'stimulus-1',
+          seed: 1,
+          axis: 'deutan',
+          direction: 'up',
+          delta: 0.08,
+          foregroundColor: [0.6, 0.4, 0.3],
+          backgroundColor: [0.4, 0.6, 0.3],
+          foregroundLuminance: 0.2,
+          backgroundLuminance: 0.25,
+          dots: [],
+        },
+        selectedDirection: 'up',
+        correct: true,
+        reactionTimeMs: 700,
+        answeredAt: '2026-08-10T00:01:00.000Z',
+      },
+    ],
     thresholds: [],
     compensation: {
       deficiency: 'deutan',

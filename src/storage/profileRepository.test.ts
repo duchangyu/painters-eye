@@ -58,7 +58,7 @@ function profile(): CalibrationProfileV1 {
       lightnessGain: 0.01,
     },
     confidence: 0.84,
-    lut: { size: 2, data: [0, 0, 0, 1, 1, 1] },
+    lut: { size: 2, data: Array.from({ length: 24 }, () => 0.5) },
   }
 }
 

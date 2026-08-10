@@ -93,8 +93,11 @@ export function assessQuickCheck(
       CONTROL_AXES.some((axis) => axis === response.axis),
     ),
   )
-  const passFloor = Math.max(0.6, profile.confidence - 0.2)
-  const reviewFloor = Math.max(0.4, passFloor - 0.25)
+  // Fixed floors: 4 dominant + 4 control trials, so 0.75 means at most one
+  // miss per group. Floors must not scale with profile.confidence — that
+  // made high-confidence profiles harder to keep than low-confidence ones.
+  const passFloor = 0.75
+  const reviewFloor = 0.5
   const status =
     dominantAccuracy >= passFloor && controlAccuracy >= passFloor
       ? 'pass'
