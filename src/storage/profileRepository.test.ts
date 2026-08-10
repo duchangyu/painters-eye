@@ -9,6 +9,7 @@ import type {
 import type { CalibrationProfileV1 } from '../domain/profile'
 import {
   createProfileRepository,
+  createDisplayFingerprint,
   migrateProfile,
   type ProfileRepository,
 } from './profileRepository'
@@ -96,6 +97,12 @@ describe('ProfileRepository', () => {
     await repository.promoteValidatedProfile(value)
 
     expect(await repository.loadActiveProfile('display-abc')).toEqual(value)
+  })
+
+  it('builds a stable fingerprint only from permitted display values', () => {
+    expect(createDisplayFingerprint(display)).toBe(
+      'studio display|1920x1080|24|2',
+    )
   })
 
   it('migrates legacy data without losing raw trials and rejects unknown versions', () => {

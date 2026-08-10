@@ -1,4 +1,7 @@
-import type { CalibrationSession } from '../domain/calibration'
+import type {
+  CalibrationSession,
+  DisplayConditions,
+} from '../domain/calibration'
 import type { CalibrationProfileV1 } from '../domain/profile'
 import { openColorMasterDb, type ColorMasterDb } from './db'
 
@@ -10,6 +13,17 @@ function assertRawTrials(value: Record<string, unknown>) {
   if (!Array.isArray(value.rawTrials)) {
     throw new TypeError('Profile must preserve raw trials')
   }
+}
+
+export function createDisplayFingerprint(
+  conditions: DisplayConditions,
+): string {
+  return [
+    conditions.displayNickname.trim().toLocaleLowerCase(),
+    `${conditions.screenWidthPx}x${conditions.screenHeightPx}`,
+    conditions.colorDepth,
+    conditions.pixelRatio,
+  ].join('|')
 }
 
 export function migrateProfile(value: unknown): CalibrationProfileV1 {

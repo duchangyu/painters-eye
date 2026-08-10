@@ -407,6 +407,120 @@ fieldset.form-section {
   max-width: 50rem;
 }
 
+.results-page {
+  width: min(100% - 2rem, 76rem);
+  margin: 0 auto;
+  padding: clamp(3rem, 8vw, 7rem) 0;
+}
+
+.results-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(16rem, 0.45fr);
+  gap: 1rem 4rem;
+  align-items: end;
+  padding-bottom: 3rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.results-hero .folio,
+.results-hero h1 {
+  grid-column: 1;
+}
+
+.results-hero h1 {
+  margin: 0;
+  font-size: clamp(3rem, 8vw, 7rem);
+  letter-spacing: -0.065em;
+  line-height: 0.88;
+}
+
+.results-hero > p:last-child {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.result-scoreboard {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-bottom: 1px solid var(--line);
+}
+
+.result-scoreboard article {
+  display: grid;
+  min-height: 14rem;
+  align-content: space-between;
+  padding: 2rem;
+  border-right: 1px solid var(--line);
+}
+
+.result-scoreboard article:last-child {
+  border-right: 0;
+}
+
+.result-scoreboard span,
+.result-scoreboard small,
+.measurement-ledger span {
+  color: var(--muted);
+}
+
+.result-scoreboard strong {
+  font-family: "Iowan Old Style", serif;
+  font-size: clamp(3rem, 7vw, 5.5rem);
+  font-weight: 500;
+}
+
+.result-scoreboard .featured-score {
+  background: var(--instrument);
+  color: white;
+}
+
+.featured-score span,
+.featured-score small {
+  color: #c8d4da;
+}
+
+.measurement-ledger {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  margin: 2.5rem 0;
+  border: 1px solid var(--line);
+}
+
+.measurement-ledger div {
+  display: grid;
+  gap: 0.5rem;
+  padding: 1.4rem;
+  border-right: 1px solid var(--line);
+}
+
+.measurement-ledger div:last-child {
+  border-right: 0;
+}
+
+.measurement-ledger strong {
+  font-family: "Iowan Old Style", serif;
+  font-size: 1.8rem;
+  font-weight: 500;
+}
+
+.limitations-note {
+  max-width: 48rem;
+  margin: 3rem 0;
+  padding-left: 1.5rem;
+  border-left: 0.35rem solid var(--accent);
+}
+
+.limitations-note h2 {
+  margin-bottom: 0.4rem;
+}
+
+.limitations-note p {
+  color: var(--muted);
+  line-height: 1.7;
+}
+
 @media (max-width: 720px) {
   .setup-intro {
     grid-template-columns: 1fr;
@@ -426,6 +540,23 @@ fieldset.form-section {
   .calibration-header {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .results-hero,
+  .result-scoreboard,
+  .measurement-ledger {
+    grid-template-columns: 1fr;
+  }
+
+  .results-hero > p:last-child {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
+  .result-scoreboard article,
+  .measurement-ledger div {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
   }
 }
 

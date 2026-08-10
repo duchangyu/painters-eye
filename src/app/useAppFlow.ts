@@ -1,7 +1,12 @@
 import { useCallback, useState } from 'react'
 import type { DisplayConditions } from '../domain/calibration'
 
-export type AppPhase = 'setup' | 'calibration' | 'validation'
+export type AppPhase =
+  | 'setup'
+  | 'calibration'
+  | 'validation'
+  | 'results'
+  | 'gallery'
 
 export function useAppFlow() {
   const [phase, setPhase] = useState<AppPhase>('setup')
@@ -22,5 +27,7 @@ export function useAppFlow() {
     displayConditions,
     beginCalibration,
     beginValidation: () => setPhase('validation'),
+    showResults: () => setPhase('results'),
+    openGallery: () => setPhase('gallery'),
   }
 }

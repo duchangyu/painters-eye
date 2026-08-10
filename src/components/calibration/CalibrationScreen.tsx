@@ -21,6 +21,10 @@ export interface CalibrationEngine {
 export interface CalibrationScreenProps {
   readonly engine: CalibrationEngine
   readonly onComplete: () => void
+  readonly eyebrow?: string
+  readonly title?: string
+  readonly note?: string
+  readonly progressName?: string
 }
 
 const KEY_DIRECTIONS: Readonly<Record<string, TargetDirection>> = {
@@ -33,6 +37,10 @@ const KEY_DIRECTIONS: Readonly<Record<string, TargetDirection>> = {
 export function CalibrationScreen({
   engine,
   onComplete,
+  eyebrow = '自适应辨色校准',
+  title = '辨认开口方向',
+  note = '看不清时请凭第一感觉选择；测量过程中不会显示正确答案。',
+  progressName = '校准进度',
 }: CalibrationScreenProps) {
   const [trialIndex, setTrialIndex] = useState(0)
   const [paused, setPaused] = useState(false)
@@ -94,8 +102,8 @@ export function CalibrationScreen({
     <main className="calibration-page">
       <header className="calibration-header">
         <div>
-          <p className="folio">自适应辨色校准</p>
-          <h1>辨认开口方向</h1>
+          <p className="folio">{eyebrow}</p>
+          <h1>{title}</h1>
         </div>
         <button
           className="quiet-button"
@@ -109,7 +117,7 @@ export function CalibrationScreen({
       <ProgressBar
         value={trialIndex}
         max={engine.trials.length}
-        label={`校准进度 ${trialIndex}/${engine.trials.length}`}
+        label={`${progressName} ${trialIndex}/${engine.trials.length}`}
       />
 
       <section className="instrument-stage" aria-live="polite">
@@ -129,7 +137,7 @@ export function CalibrationScreen({
       </section>
 
       <p className="measurement-note">
-        看不清时请凭第一感觉选择；测量过程中不会显示正确答案。
+        {note}
       </p>
     </main>
   )
