@@ -1,18 +1,21 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   createCalibrationSchedule,
   toPublicTrial,
 } from '../calibration/session'
 import type { TrialResponse } from '../domain/calibration'
 import type { CalibrationProfileV1 } from '../domain/profile'
-import { buildCompensationLut } from '../color/lut'
+import { buildCompensationLut, generateLut } from '../color/lut'
 import {
   CalibrationScreen,
   type CalibrationAnswer,
   type CalibrationEngine,
 } from '../components/calibration/CalibrationScreen'
+import { GalleryScreen } from '../components/gallery/GalleryScreen'
 import { ResultsScreen } from '../components/results/ResultsScreen'
 import { DisplaySetup } from '../components/setup/DisplaySetup'
+import { ArtworkViewer } from '../components/viewer/ArtworkViewer'
+import { ARTWORKS, type ArtworkRecord } from '../data/artworks'
 import { fitProfile, type FittedBehavioralProfile } from '../profile/fitProfile'
 import {
   createDisplayFingerprint,
@@ -33,8 +36,11 @@ export function AppFlow() {
   const flow = useAppFlow()
   const responses = useRef<TrialResponse[]>([])
   const validationResponses = useRef<ValidationResponse[]>([])
+  const customImageUrl = useRef<string | null>(null)
   const [profile, setProfile] = useState<FittedBehavioralProfile | null>(null)
   const [metrics, setMetrics] = useState<ValidationMetrics | null>(null)
+  const [selectedArtwork, setSelectedArtwork] =
+    useState<ArtworkRecord | null>(null)
   const schedule = useMemo(
     () => createCalibrationSchedule({ seed: 20260810 }),
     [],
@@ -104,6 +110,22 @@ export function AppFlow() {
       },
     }
   }, [validationTrials])
+  const viewerLut = useMemo(
+    () =>
+      profile
+        ? buildCompensationLut(profile)
+        : generateLut(2, (color) => color),
+    [profile],
+  )
+
+  useEffect(
+    () => () => {
+      if (customImageUrl.current) {
+        URL.revokeObjectURL(customImageUrl.current)
+      }
+    },
+    [],
+  )
 
   function completeCalibration() {
     setProfile(fitProfile(responses.current))
@@ -146,6 +168,28 @@ export function AppFlow() {
     flow.openGallery()
   }
 
+  function openPersonalImage(file: File) {
+    if (customImageUrl.current) {
+      URL.revokeObjectURL(customImageUrl.current)
+    }
+    const imagePath = URL.createObjectURL(file)
+    customImageUrl.current = imagePath
+    setSelectedArtwork({
+      id: `personal-${file.name}`,
+      titleZh: file.name,
+      titleOriginal: '个人图片',
+      artist: '仅在本机处理',
+      date: '当前会话',
+      imagePath,
+      objectPageUrl: 'about:blank',
+      imageSourceUrl: imagePath,
+      rights: 'User provided',
+      rationale: '用于观察你熟悉的颜色关系。',
+      interpretation:
+        '这是一张个人图片。请先看原图，再开启增强，并留意细节分离是否改善、肤色或中性色是否失真。',
+    })
+  }
+
   if (flow.phase === 'setup') {
     return <DisplaySetup onComplete={flow.beginCalibration} />
   }
@@ -176,11 +220,22 @@ export function AppFlow() {
     )
   }
   if (flow.phase === 'gallery') {
+    if (selectedArtwork) {
+      return (
+        <ArtworkViewer
+          artwork={selectedArtwork}
+          lut={viewerLut}
+          recommendedStrength={profile?.recommendedStrength ?? 0}
+          onBack={() => setSelectedArtwork(null)}
+        />
+      )
+    }
     return (
-      <main className="calibration-page completion-pause">
-        <p className="folio">个人配置已准备</p>
-        <h1>画廊正在载入</h1>
-      </main>
+      <GalleryScreen
+        artworks={ARTWORKS}
+        onSelect={setSelectedArtwork}
+        onUpload={openPersonalImage}
+      />
     )
   }
 

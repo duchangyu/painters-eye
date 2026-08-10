@@ -7,7 +7,7 @@ export interface ArtworkRecord {
   imagePath: string
   objectPageUrl: string
   imageSourceUrl: string
-  rights: 'Public Domain' | 'CC0'
+  rights: 'Public Domain' | 'CC0' | 'User provided'
   rationale: string
   interpretation: string
 }
