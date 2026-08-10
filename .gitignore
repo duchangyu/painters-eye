@@ -1,1 +1,9 @@
 .worktrees/
+node_modules/
+dist/
+coverage/
+.vite/
+*.local
+playwright-report/
+test-results/
+blob-report/
