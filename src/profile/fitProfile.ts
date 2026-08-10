@@ -7,6 +7,7 @@ import type {
   ThresholdEstimate,
 } from '../domain/profile'
 import { optimizeCompensation } from '../color/compensate'
+import { AXIS_STEP_SIZE } from '../calibration/adaptiveSession'
 
 const TARGET_AXES = ['protan', 'deutan'] as const
 const CONTROL_AXES = [
@@ -29,21 +30,62 @@ function median(values: readonly number[]): number {
     : sorted[middle]!
 }
 
+function mean(values: readonly number[]): number {
+  return values.length === 0
+    ? 0
+    : values.reduce((sum, value) => sum + value, 0) / values.length
+}
+
 function estimateAxis(
   trials: readonly TrialResponse[],
   axis: ConfusionAxis,
 ): ThresholdEstimate {
-  const deltas = trials
-    .filter((trial) => trial.stimulus.axis === axis)
-    .map((trial) => trial.stimulus.delta)
-  const delta = median(deltas)
-  const absoluteDeviations = deltas.map((value) => Math.abs(value - delta))
+  const selected = trials.filter(
+    (trial) =>
+      trial.stimulus.axis === axis && !trial.repeatedFromTrialId,
+  )
+  if (selected.length === 0) {
+    throw new RangeError(`cannot estimate ${axis} without trials`)
+  }
+  let consecutiveCorrect = 0
+  let lastMovement: 'up' | 'down' | null = null
+  const reversalDeltas: number[] = []
+  for (const trial of selected) {
+    consecutiveCorrect = trial.correct ? consecutiveCorrect + 1 : 0
+    const movement = trial.correct
+      ? consecutiveCorrect >= 2
+        ? 'down'
+        : null
+      : 'up'
+    if (!movement) continue
+    if (lastMovement && movement !== lastMovement) {
+      reversalDeltas.push(trial.stimulus.delta)
+    }
+    lastMovement = movement
+    consecutiveCorrect = 0
+  }
+  const performanceEstimates = selected.slice(-6).map((trial) =>
+    Math.min(
+      0.25,
+      Math.max(
+        0.005,
+        trial.stimulus.delta +
+          (trial.correct ? -1 : 1) * AXIS_STEP_SIZE[axis] * 0.5,
+      ),
+    ),
+  )
+  const evidence =
+    reversalDeltas.length >= 2
+      ? reversalDeltas.slice(-6)
+      : performanceEstimates
+  const delta = median(evidence)
+  const absoluteDeviations = evidence.map((value) => Math.abs(value - delta))
   const margin = Math.max(0.005, median(absoluteDeviations))
 
   return {
     axis,
     delta,
-    reversalDeltas: deltas,
+    reversalDeltas,
     confidenceInterval: [
       Math.max(0, delta - margin),
       Math.min(0.25, delta + margin),
@@ -51,7 +93,9 @@ function estimateAxis(
   }
 }
 
-function repeatConsistency(trials: readonly TrialResponse[]): number {
+export function calculateRepeatConsistency(
+  trials: readonly TrialResponse[],
+): number {
   const trialsById = new Map(trials.map((trial) => [trial.id, trial]))
   const repeats = trials.flatMap((trial) => {
     if (!trial.repeatedFromTrialId) {
@@ -93,14 +137,21 @@ export function fitProfile(
   const dominantThreshold = Math.max(protan.delta, deutan.delta)
   const normalizedExcess = dominantThreshold / Math.max(controlThreshold, 0.005) - 1
   const severity = clampUnit(normalizedExcess / 3)
-  const repeatScore = repeatConsistency(trials)
+  const repeatScore = calculateRepeatConsistency(trials)
   const sampleScore = clampUnit(
     trials.filter(
       (trial) =>
         trial.stimulus.axis === 'protan' || trial.stimulus.axis === 'deutan',
     ).length / 24,
   )
-  const confidence = clampUnit(0.8 * repeatScore + 0.2 * sampleScore)
+  const reversalScore = mean(
+    thresholds.map((threshold) =>
+      clampUnit(threshold.reversalDeltas.length / 4),
+    ),
+  )
+  const confidence = clampUnit(
+    0.55 * repeatScore + 0.25 * sampleScore + 0.2 * reversalScore,
+  )
   const optimized = optimizeCompensation({
     deficiency,
     severity,

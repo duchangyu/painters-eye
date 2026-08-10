@@ -63,4 +63,27 @@ describe('fitProfile', () => {
 
     expect(consistent.confidence).toBeGreaterThan(inconsistent.confidence)
   })
+
+  it('estimates a higher threshold when the same color differences are missed', () => {
+    const seen = [0.12, 0.1, 0.08, 0.06, 0.04, 0.03].map((delta, index) =>
+      response(`seen-${index}`, 'deutan', delta, true),
+    )
+    const missed = [0.12, 0.1, 0.08, 0.06, 0.04, 0.03].map(
+      (delta, index) => response(`missed-${index}`, 'deutan', delta, false),
+    )
+    const controls = [
+      response('control-b', 'blue-yellow-control', 0.03, true),
+      response('control-l', 'luminance-control', 0.03, true),
+      response('protan-a', 'protan', 0.04, true),
+    ]
+
+    const seenThreshold = fitProfile([...controls, ...seen]).thresholds.find(
+      (threshold) => threshold.axis === 'deutan',
+    )!
+    const missedThreshold = fitProfile([...controls, ...missed]).thresholds.find(
+      (threshold) => threshold.axis === 'deutan',
+    )!
+
+    expect(missedThreshold.delta).toBeGreaterThan(seenThreshold.delta)
+  })
 })

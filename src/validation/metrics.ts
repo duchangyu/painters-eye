@@ -61,6 +61,7 @@ function metricsFor(
 
 export function summarizeValidation(
   responses: readonly ValidationResponse[],
+  repeatConsistency = 1,
 ): ValidationMetrics {
   const byCondition = {
     original: metricsFor(responses, 'original'),
@@ -90,7 +91,7 @@ export function summarizeValidation(
     byCondition,
     accuracyImprovement,
     reactionTimeImprovementMs,
-    repeatConsistency: 1,
+    repeatConsistency,
     confidence,
     passed,
   }

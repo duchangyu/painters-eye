@@ -1,8 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import {
-  createCalibrationSchedule,
-  toPublicTrial,
-} from '../calibration/session'
+import { createAdaptiveCalibrationSession } from '../calibration/adaptiveSession'
 import {
   assessQuickCheck,
   createQuickCheckTrials,
@@ -25,7 +22,11 @@ import { ResultsScreen } from '../components/results/ResultsScreen'
 import { DisplaySetup } from '../components/setup/DisplaySetup'
 import { ArtworkViewer } from '../components/viewer/ArtworkViewer'
 import { ARTWORKS, findArtwork, type ArtworkRecord } from '../data/artworks'
-import { fitProfile, type FittedBehavioralProfile } from '../profile/fitProfile'
+import {
+  calculateRepeatConsistency,
+  fitProfile,
+  type FittedBehavioralProfile,
+} from '../profile/fitProfile'
 import {
   createDisplayFingerprint,
   createProfileRepository,
@@ -57,43 +58,37 @@ export function AppFlow() {
   const [quickCheckResult, setQuickCheckResult] =
     useState<QuickCheckAssessment | null>(null)
   const [originalOnly, setOriginalOnly] = useState(false)
+  const [calibrationRun, setCalibrationRun] = useState(0)
   const [selectedArtwork, setSelectedArtwork] =
     useState<ArtworkRecord | null>(null)
-  const schedule = useMemo(
+  const calibrationSession = useMemo(
     () =>
-      createCalibrationSchedule({
-        seed: 20260810,
+      createAdaptiveCalibrationSession({
+        seed: 20260810 + calibrationRun,
         ...(isE2eMode ? { trialsPerAxis: 1, repeatCount: 0 } : {}),
       }),
-    [],
+    [calibrationRun],
   )
+  const schedule = calibrationSession.scheduledTrials
   const engine = useMemo<CalibrationEngine>(() => {
-    const scheduleById = new Map(schedule.map((trial) => [trial.id, trial]))
     return {
-      trials: schedule.map(toPublicTrial),
+      trials: calibrationSession.trials,
       recordAnswer(answer: CalibrationAnswer) {
-        const scheduled = scheduleById.get(answer.trialId)
-        if (!scheduled) {
-          return
-        }
-        responses.current.push({
-          id: scheduled.id,
-          stimulus: scheduled.stimulus,
-          selectedDirection: answer.selectedDirection,
-          correct: answer.selectedDirection === scheduled.stimulus.direction,
-          reactionTimeMs: answer.reactionTimeMs,
-          answeredAt: new Date().toISOString(),
-          repeatedFromTrialId: scheduled.repeatedFromTrialId,
-        })
+        const response = calibrationSession.recordAnswer(answer)
+        if (response) responses.current.push(response)
       },
       saveDraft(completedTrials: number) {
         localStorage.setItem(
           'color-master:calibration-draft',
-          JSON.stringify({ completedTrials, responses: responses.current }),
+          JSON.stringify({
+            completedTrials,
+            responses: responses.current,
+            staircases: calibrationSession.staircases(),
+          }),
         )
       },
     }
-  }, [schedule])
+  }, [calibrationSession])
   const validationTrials = useMemo(
     () =>
       profile
@@ -241,7 +236,12 @@ export function AppFlow() {
   }
 
   function completeValidation() {
-    setMetrics(summarizeValidation(validationResponses.current))
+    setMetrics(
+      summarizeValidation(
+        validationResponses.current,
+        calculateRepeatConsistency(responses.current),
+      ),
+    )
     flow.showResults()
   }
 
@@ -255,7 +255,7 @@ export function AppFlow() {
       const value: CalibrationProfileV1 = {
         schemaVersion: 1,
         id: `profile-${createdAt}`,
-        algorithmVersion: '1.0.0-mvp',
+        algorithmVersion: '1.1.0-mvp-adaptive',
         createdAt,
         displayFingerprint: createDisplayFingerprint(flow.displayConditions),
         displayConditions: flow.displayConditions,
@@ -339,6 +339,7 @@ export function AppFlow() {
     setProfile(null)
     setMetrics(null)
     setQuickCheckResult(null)
+    setCalibrationRun((value) => value + 1)
     flow.beginCalibration(flow.displayConditions)
   }
 
