@@ -41,39 +41,17 @@ import {
   createValidationSession,
   toPublicValidationTrial,
 } from '../validation/validationSession'
+import {
+  CALIBRATION_SCHEDULE_VERSION,
+  clearCalibrationDraft,
+  loadCalibrationDraft,
+  saveCalibrationDraft,
+  type StoredCalibrationDraft,
+} from './calibrationDraft'
 import { useAppFlow } from './useAppFlow'
 import { isE2eMode } from '../config/runtime'
 
 const SELECTED_ARTWORK_KEY = 'color-master:selected-artwork'
-const CALIBRATION_DRAFT_KEY = 'color-master:calibration-draft'
-
-interface StoredCalibrationDraft {
-  readonly seed: number
-  readonly completedTrials: number
-  readonly responses: readonly TrialResponse[]
-}
-
-function loadCalibrationDraft(): StoredCalibrationDraft | null {
-  const serialized = globalThis.window?.localStorage?.getItem(
-    CALIBRATION_DRAFT_KEY,
-  )
-  if (!serialized) return null
-  try {
-    const value = JSON.parse(serialized) as Partial<StoredCalibrationDraft>
-    if (
-      !Number.isInteger(value.seed) ||
-      !Number.isInteger(value.completedTrials) ||
-      value.completedTrials! <= 0 ||
-      !Array.isArray(value.responses) ||
-      value.responses.length < value.completedTrials!
-    ) {
-      return null
-    }
-    return value as StoredCalibrationDraft
-  } catch {
-    return null
-  }
-}
 
 function profileValidationSummary(
   metrics: ValidationMetrics,
@@ -102,9 +80,7 @@ export function AppFlow() {
   const flow = useAppFlow()
   const [calibrationDraft, setCalibrationDraft] =
     useState<StoredCalibrationDraft | null>(loadCalibrationDraft)
-  const responses = useRef<TrialResponse[]>([
-    ...(calibrationDraft?.responses ?? []),
-  ])
+  const responses = useRef<TrialResponse[]>([])
   const validationResponses = useRef<ValidationResponse[]>([])
   const quickCheckResponses = useRef<QuickCheckResponse[]>([])
   const customImageUrl = useRef<string | null>(null)
@@ -128,15 +104,24 @@ export function AppFlow() {
         ...(isE2eMode ? { trialsPerAxis: 1, repeatCount: 0 } : {}),
       })
     if (calibrationRun === 0 && calibrationDraft) {
-      calibrationDraft.responses
+      const replayed = calibrationDraft.responses
         .slice(0, calibrationDraft.completedTrials)
-        .forEach((response) => {
+        .map((response) =>
           session.recordAnswer({
             trialId: response.id,
             selectedDirection: response.selectedDirection,
             reactionTimeMs: response.reactionTimeMs,
-          })
-        })
+          }),
+        )
+      if (replayed.some((response) => response === undefined)) {
+        // The schedule drifted from the draft (should not happen past the
+        // loader's id/version checks): drop the draft rather than fit on
+        // mismatched evidence.
+        clearCalibrationDraft()
+        responses.current = []
+      } else {
+        responses.current = replayed as TrialResponse[]
+      }
     }
     return session
   }, [calibrationDraft, calibrationRun, calibrationSeed])
@@ -151,15 +136,12 @@ export function AppFlow() {
         if (response) responses.current.push(response)
       },
       saveDraft(completedTrials: number) {
-        localStorage.setItem(
-          CALIBRATION_DRAFT_KEY,
-          JSON.stringify({
-            seed: calibrationSeed,
-            completedTrials,
-            responses: responses.current,
-            staircases: calibrationSession.staircases(),
-          }),
-        )
+        saveCalibrationDraft({
+          version: CALIBRATION_SCHEDULE_VERSION,
+          seed: calibrationSeed,
+          completedTrials,
+          responses: responses.current,
+        })
       },
     }
   }, [calibrationSeed, calibrationSession])
@@ -320,7 +302,8 @@ export function AppFlow() {
   )
 
   function completeCalibration() {
-    localStorage.removeItem(CALIBRATION_DRAFT_KEY)
+    clearCalibrationDraft()
+    setCalibrationDraft(null)
     setProfile(fitProfile(responses.current, calibrationSession.staircases()))
     flow.beginValidation()
   }
@@ -377,7 +360,7 @@ export function AppFlow() {
 
   function handleDisplaySetup(conditions: DisplayConditions) {
     if (!activeProfile) {
-      localStorage.removeItem(CALIBRATION_DRAFT_KEY)
+      clearCalibrationDraft()
       setCalibrationDraft(null)
       responses.current = []
       validationResponses.current = []
@@ -432,7 +415,7 @@ export function AppFlow() {
     setProfile(null)
     setMetrics(null)
     setQuickCheckResult(null)
-    localStorage.removeItem(CALIBRATION_DRAFT_KEY)
+    clearCalibrationDraft()
     setCalibrationDraft(null)
     setCalibrationRun((value) => value + 1)
     flow.beginCalibration(flow.displayConditions)
