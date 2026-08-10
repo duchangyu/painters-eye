@@ -19,6 +19,13 @@ export interface CompensationParameters {
   readonly recommendedStrength: number
   readonly chromaGain: number
   readonly lightnessGain: number
+  readonly objective?: {
+    readonly simulatedSeparation: number
+    readonly naturalnessCost: number
+    readonly luminancePenalty: number
+    readonly controlAxisPenalty: number
+    readonly total: number
+  }
 }
 
 export interface CalibrationProfileV1 {
