@@ -3,7 +3,15 @@ import {
   createCalibrationSchedule,
   toPublicTrial,
 } from '../calibration/session'
-import type { TrialResponse } from '../domain/calibration'
+import {
+  assessQuickCheck,
+  createQuickCheckTrials,
+  quickCheckRequirement,
+  toQuickCheckResponse,
+  type QuickCheckAssessment,
+  type QuickCheckResponse,
+} from '../calibration/quickCheck'
+import type { DisplayConditions, TrialResponse } from '../domain/calibration'
 import type { CalibrationProfileV1 } from '../domain/profile'
 import { buildCompensationLut, generateLut } from '../color/lut'
 import {
@@ -12,6 +20,7 @@ import {
   type CalibrationEngine,
 } from '../components/calibration/CalibrationScreen'
 import { GalleryScreen } from '../components/gallery/GalleryScreen'
+import { ProfileSettings } from '../components/profile/ProfileSettings'
 import { ResultsScreen } from '../components/results/ResultsScreen'
 import { DisplaySetup } from '../components/setup/DisplaySetup'
 import { ArtworkViewer } from '../components/viewer/ArtworkViewer'
@@ -36,9 +45,15 @@ export function AppFlow() {
   const flow = useAppFlow()
   const responses = useRef<TrialResponse[]>([])
   const validationResponses = useRef<ValidationResponse[]>([])
+  const quickCheckResponses = useRef<QuickCheckResponse[]>([])
   const customImageUrl = useRef<string | null>(null)
   const [profile, setProfile] = useState<FittedBehavioralProfile | null>(null)
+  const [activeProfile, setActiveProfile] =
+    useState<CalibrationProfileV1 | null>(null)
   const [metrics, setMetrics] = useState<ValidationMetrics | null>(null)
+  const [quickCheckResult, setQuickCheckResult] =
+    useState<QuickCheckAssessment | null>(null)
+  const [originalOnly, setOriginalOnly] = useState(false)
   const [selectedArtwork, setSelectedArtwork] =
     useState<ArtworkRecord | null>(null)
   const schedule = useMemo(
@@ -110,13 +125,89 @@ export function AppFlow() {
       },
     }
   }, [validationTrials])
+  const quickCheckTrials = useMemo(
+    () =>
+      activeProfile ? createQuickCheckTrials(activeProfile, 20260812) : [],
+    [activeProfile],
+  )
+  const quickCheckEngine = useMemo<CalibrationEngine>(() => {
+    const trialsById = new Map(quickCheckTrials.map((trial) => [trial.id, trial]))
+    return {
+      trials: quickCheckTrials,
+      recordAnswer(answer: CalibrationAnswer) {
+        const trial = trialsById.get(answer.trialId)
+        if (!trial) return
+        quickCheckResponses.current.push(
+          toQuickCheckResponse(trial, {
+            selectedDirection: answer.selectedDirection,
+          }),
+        )
+      },
+      saveDraft(completedTrials: number) {
+        localStorage.setItem(
+          'color-master:quick-check-draft',
+          JSON.stringify({
+            completedTrials,
+            responses: quickCheckResponses.current,
+          }),
+        )
+      },
+    }
+  }, [quickCheckTrials])
   const viewerLut = useMemo(
     () =>
-      profile
-        ? buildCompensationLut(profile)
-        : generateLut(2, (color) => color),
-    [profile],
+      originalOnly
+        ? generateLut(2, (color) => color)
+        : activeProfile
+          ? activeProfile.lut
+          : profile
+            ? buildCompensationLut(profile)
+            : generateLut(2, (color) => color),
+    [activeProfile, originalOnly, profile],
   )
+
+  const restoreProfile = flow.restoreProfile
+  useEffect(() => {
+    let cancelled = false
+
+    async function restore() {
+      const browserStorage = globalThis.window?.localStorage
+      if (!browserStorage) return
+      const serialized = browserStorage.getItem(
+        'color-master:display-conditions',
+      )
+      if (!serialized) return
+      let conditions: DisplayConditions
+      try {
+        conditions = JSON.parse(serialized) as DisplayConditions
+      } catch {
+        return
+      }
+      const fingerprint = createDisplayFingerprint(conditions)
+      const repository = await createProfileRepository()
+      try {
+        const exact = await repository.loadActiveProfile(fingerprint)
+        const candidate = exact ?? (await repository.loadMostRecentProfile())
+        if (!candidate || cancelled) return
+        const requirement = quickCheckRequirement({
+          profile: candidate,
+          currentDisplayFingerprint: fingerprint,
+          lastCheckedAt: browserStorage.getItem(
+            `color-master:quick-check:${candidate.id}`,
+          ),
+        })
+        setActiveProfile(candidate)
+        restoreProfile(conditions, requirement !== 'not-due')
+      } finally {
+        repository.close()
+      }
+    }
+
+    void restore()
+    return () => {
+      cancelled = true
+    }
+  }, [restoreProfile])
 
   useEffect(
     () => () => {
@@ -161,11 +252,89 @@ export function AppFlow() {
       const repository = await createProfileRepository()
       try {
         await repository.promoteValidatedProfile(value)
+        setActiveProfile(value)
+        setOriginalOnly(false)
+        localStorage.setItem(
+          `color-master:quick-check:${value.id}`,
+          createdAt,
+        )
       } finally {
         repository.close()
       }
+    } else {
+      setOriginalOnly(true)
     }
     flow.openGallery()
+  }
+
+  function handleDisplaySetup(conditions: DisplayConditions) {
+    if (!activeProfile) {
+      responses.current = []
+      validationResponses.current = []
+      flow.beginCalibration(conditions)
+      return
+    }
+    quickCheckResponses.current = []
+    setQuickCheckResult(null)
+    flow.beginQuickCheck(conditions)
+  }
+
+  async function completeQuickCheck() {
+    if (!activeProfile || !flow.displayConditions) return
+    const result = assessQuickCheck(activeProfile, quickCheckResponses.current)
+    setQuickCheckResult(result)
+    if (result.status !== 'pass') {
+      flow.showQuickCheckResult()
+      return
+    }
+
+    const fingerprint = createDisplayFingerprint(flow.displayConditions)
+    const verifiedProfile: CalibrationProfileV1 = {
+      ...activeProfile,
+      id:
+        fingerprint === activeProfile.displayFingerprint
+          ? activeProfile.id
+          : `${activeProfile.id}-display-${Date.now()}`,
+      displayFingerprint: fingerprint,
+      displayConditions: flow.displayConditions,
+    }
+    const checkedAt = new Date().toISOString()
+    const repository = await createProfileRepository()
+    try {
+      await repository.promoteValidatedProfile(verifiedProfile)
+      setActiveProfile(verifiedProfile)
+      setOriginalOnly(false)
+      localStorage.setItem(
+        `color-master:quick-check:${verifiedProfile.id}`,
+        checkedAt,
+      )
+    } finally {
+      repository.close()
+    }
+    flow.openGallery()
+  }
+
+  function restartCalibration() {
+    if (!flow.displayConditions) return
+    responses.current = []
+    validationResponses.current = []
+    quickCheckResponses.current = []
+    setProfile(null)
+    setMetrics(null)
+    setQuickCheckResult(null)
+    flow.beginCalibration(flow.displayConditions)
+  }
+
+  async function importProfile(value: CalibrationProfileV1) {
+    const repository = await createProfileRepository()
+    try {
+      await repository.promoteValidatedProfile(value)
+    } finally {
+      repository.close()
+    }
+    setActiveProfile(value)
+    setOriginalOnly(false)
+    flow.restoreProfile(value.displayConditions, false)
   }
 
   function openPersonalImage(file: File) {
@@ -191,7 +360,13 @@ export function AppFlow() {
   }
 
   if (flow.phase === 'setup') {
-    return <DisplaySetup onComplete={flow.beginCalibration} />
+    return (
+      <DisplaySetup
+        onComplete={handleDisplaySetup}
+        initialConditions={activeProfile?.displayConditions}
+        mode={activeProfile ? 'review' : 'calibrate'}
+      />
+    )
   }
   if (flow.phase === 'calibration') {
     return (
@@ -219,13 +394,93 @@ export function AppFlow() {
       />
     )
   }
+  if (flow.phase === 'quick-check' && activeProfile) {
+    return (
+      <CalibrationScreen
+        engine={quickCheckEngine}
+        onComplete={() => void completeQuickCheck()}
+        eyebrow="配置短复核 · 8 题"
+        title="确认这套增强仍然合适"
+        progressName="复核进度"
+        note="请保持与原校准相近的亮度。短复核不会自动删除旧配置。"
+      />
+    )
+  }
+  if (
+    flow.phase === 'quick-check-result' &&
+    activeProfile &&
+    quickCheckResult
+  ) {
+    return (
+      <main className="calibration-page completion-pause quick-check-result">
+        <p className="folio">短复核未通过</p>
+        <h1>
+          {quickCheckResult.status === 'review-display-settings'
+            ? '先检查显示设置'
+            : '建议重新完整校准'}
+        </h1>
+        <p>
+          目标轴正确率 {Math.round(quickCheckResult.dominantAccuracy * 100)}%，
+          控制轴正确率 {Math.round(quickCheckResult.controlAccuracy * 100)}%。旧配置仍然保留。
+        </p>
+        <div className="quick-check-actions">
+          <button className="primary-button" type="button" onClick={flow.reviewDisplay}>
+            检查显示设置
+          </button>
+          <button className="quiet-button" type="button" onClick={restartCalibration}>
+            重新完整校准
+          </button>
+          <button
+            className="text-button"
+            type="button"
+            onClick={() => {
+              setOriginalOnly(true)
+              flow.openGallery()
+            }}
+          >
+            暂时只看原图
+          </button>
+        </div>
+      </main>
+    )
+  }
+  if (flow.phase === 'profile' && activeProfile) {
+    return (
+      <ProfileSettings
+        profile={activeProfile}
+        validation={
+          metrics
+            ? {
+                passed: metrics.passed,
+                personalizedAccuracy:
+                  metrics.byCondition.personalized.accuracy,
+                originalAccuracy: metrics.byCondition.original.accuracy,
+                genericAccuracy: metrics.byCondition.generic.accuracy,
+                medianReactionTimeMs:
+                  metrics.byCondition.personalized.medianReactionTimeMs,
+              }
+            : { passed: true }
+        }
+        onClose={flow.openGallery}
+        onImport={importProfile}
+        onReviewDisplay={flow.reviewDisplay}
+        onRecalibrate={restartCalibration}
+      />
+    )
+  }
   if (flow.phase === 'gallery') {
     if (selectedArtwork) {
       return (
         <ArtworkViewer
           artwork={selectedArtwork}
           lut={viewerLut}
-          recommendedStrength={profile?.recommendedStrength ?? 0}
+          recommendedStrength={
+            originalOnly
+              ? 0
+              : activeProfile?.compensation.recommendedStrength ??
+                profile?.recommendedStrength ??
+                0
+          }
           onBack={() => setSelectedArtwork(null)}
         />
       )
@@ -235,6 +490,7 @@ export function AppFlow() {
         artworks={ARTWORKS}
         onSelect={setSelectedArtwork}
         onUpload={openPersonalImage}
+        onOpenProfile={activeProfile ? flow.openProfile : undefined}
       />
     )
   }

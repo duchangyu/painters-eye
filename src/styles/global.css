@@ -899,6 +899,161 @@ fieldset.form-section {
   margin-top: 1rem;
 }
 
+.profile-page {
+  width: min(100% - 2rem, 76rem);
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: clamp(2rem, 6vw, 5rem) 0;
+}
+
+.profile-header {
+  display: grid;
+  grid-template-columns: minmax(9rem, 0.3fr) minmax(0, 1fr);
+  gap: 2rem;
+  align-items: start;
+  padding-bottom: 3rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.profile-header .text-button {
+  justify-self: start;
+}
+
+.profile-header h1 {
+  max-width: 11ch;
+  margin: 0;
+  font-size: clamp(3rem, 8vw, 6.5rem);
+  letter-spacing: -0.065em;
+  line-height: 0.88;
+}
+
+.profile-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(20rem, 0.8fr);
+  gap: 2rem;
+  padding: 2.5rem 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.profile-summary h2 {
+  margin-bottom: 0.5rem;
+  font-size: 2rem;
+}
+
+.profile-summary p:last-child {
+  color: var(--muted);
+}
+
+.profile-summary dl {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  margin: 0;
+  border: 1px solid var(--line);
+}
+
+.profile-summary dl > div {
+  display: grid;
+  gap: 0.5rem;
+  padding: 1.1rem;
+  border-right: 1px solid var(--line);
+}
+
+.profile-summary dl > div:last-child {
+  border-right: 0;
+}
+
+.profile-summary dt {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.profile-summary dd {
+  margin: 0;
+  font-family: "Iowan Old Style", serif;
+  font-size: 1.6rem;
+}
+
+.profile-actions article {
+  display: grid;
+  grid-template-columns: 3rem minmax(0, 1fr);
+  gap: 2rem;
+  padding: 2.5rem 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.profile-actions article > span {
+  color: var(--muted);
+  font-family: "Iowan Old Style", serif;
+}
+
+.profile-actions article > div {
+  display: flex;
+  max-width: 48rem;
+  align-items: center;
+  gap: 1rem 2rem;
+  flex-wrap: wrap;
+}
+
+.profile-actions h2,
+.profile-actions p {
+  flex-basis: 100%;
+}
+
+.profile-actions h2 {
+  margin-bottom: 0;
+  font-size: 2rem;
+}
+
+.profile-actions p {
+  margin-bottom: 0;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.import-preview {
+  display: grid;
+  gap: 0.4rem;
+  flex-basis: 100%;
+  padding: 1.2rem;
+  border-left: 0.35rem solid var(--accent);
+  background: rgb(247 244 237 / 80%);
+}
+
+.import-preview span {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.import-preview .primary-button {
+  justify-self: start;
+  margin-top: 0.5rem;
+}
+
+.profile-error {
+  margin: 2rem 0;
+  padding: 1rem;
+  border-left: 0.35rem solid #9b3d35;
+  background: #f3dfda;
+}
+
+.profile-page > .limitations-note {
+  padding-left: 1.5rem;
+}
+
+.quick-check-result p:not(.folio) {
+  max-width: 42rem;
+  margin: 1.5rem 0;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.quick-check-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
 @media (max-width: 720px) {
   .setup-intro {
     grid-template-columns: 1fr;
@@ -972,6 +1127,24 @@ fieldset.form-section {
   .viewer-panel + .viewer-panel {
     border-top: 1px solid rgb(255 255 255 / 16%);
     border-left: 0;
+  }
+
+  .profile-header,
+  .profile-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-summary dl {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-summary dl > div {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .profile-actions article {
+    grid-template-columns: 2rem minmax(0, 1fr);
   }
 }
 

@@ -99,6 +99,19 @@ describe('ProfileRepository', () => {
     expect(await repository.loadActiveProfile('display-abc')).toEqual(value)
   })
 
+  it('loads the most recent validated profile when the display fingerprint changed', async () => {
+    const older = profile()
+    const newer = {
+      ...profile(),
+      id: 'profile-2',
+      createdAt: '2026-08-11T00:02:00.000Z',
+      displayFingerprint: 'display-newer',
+    }
+    await repository.promoteValidatedProfile(older)
+    await repository.promoteValidatedProfile(newer)
+    expect(await repository.loadMostRecentProfile()).toEqual(newer)
+  })
+
   it('builds a stable fingerprint only from permitted display values', () => {
     expect(createDisplayFingerprint(display)).toBe(
       'studio display|1920x1080|24|2',

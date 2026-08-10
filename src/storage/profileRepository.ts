@@ -90,6 +90,13 @@ export class ProfileRepository {
     return profile ? migrateProfile(profile) : undefined
   }
 
+  async loadMostRecentProfile(): Promise<CalibrationProfileV1 | undefined> {
+    const profiles = (await this.database.getAll('profiles')).map(migrateProfile)
+    return profiles.sort(
+      (left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt),
+    )[0]
+  }
+
   close() {
     this.database.close()
   }

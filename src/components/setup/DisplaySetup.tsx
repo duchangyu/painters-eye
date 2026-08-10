@@ -3,11 +3,21 @@ import type { DisplayConditions } from '../../domain/calibration'
 
 export interface DisplaySetupProps {
   readonly onComplete: (conditions: DisplayConditions) => void
+  readonly initialConditions?: DisplayConditions
+  readonly mode?: 'calibrate' | 'review'
 }
 
-export function DisplaySetup({ onComplete }: DisplaySetupProps) {
-  const [displayNickname, setDisplayNickname] = useState('')
-  const [brightnessDescription, setBrightnessDescription] = useState('')
+export function DisplaySetup({
+  onComplete,
+  initialConditions,
+  mode = 'calibrate',
+}: DisplaySetupProps) {
+  const [displayNickname, setDisplayNickname] = useState(
+    initialConditions?.displayNickname ?? '',
+  )
+  const [brightnessDescription, setBrightnessDescription] = useState(
+    initialConditions?.brightnessDescription ?? '',
+  )
   const [nightShiftOff, setNightShiftOff] = useState(false)
   const [trueToneOff, setTrueToneOff] = useState(false)
   const [colorFiltersOff, setColorFiltersOff] = useState(false)
@@ -46,7 +56,9 @@ export function DisplaySetup({ onComplete }: DisplaySetupProps) {
       </header>
 
       <section className="setup-intro" aria-labelledby="product-title">
-        <p className="folio">首次校准 · 约 10–15 分钟</p>
+        <p className="folio">
+          {mode === 'review' ? '显示环境复核 · 约 2 分钟' : '首次校准 · 约 10–15 分钟'}
+        </p>
         <h1 id="product-title">Color Master</h1>
         <p className="intro-lede">
           在这台固定显示器上测量你的红绿色彩辨别能力，再生成可验证的个人增强。
@@ -121,7 +133,8 @@ export function DisplaySetup({ onComplete }: DisplaySetupProps) {
         <div className="setup-action">
           <p>数据仅保存在当前浏览器中。</p>
           <button className="primary-button" type="submit" disabled={!ready}>
-            开始校准 <span aria-hidden="true">→</span>
+            {mode === 'review' ? '开始短复核' : '开始校准'}{' '}
+            <span aria-hidden="true">→</span>
           </button>
         </div>
       </form>
