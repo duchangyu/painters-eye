@@ -53,6 +53,7 @@ export interface StaircaseState {
   readonly reversals: readonly number[]
   readonly trialCount: number
   readonly maxTrials: number
+  readonly targetReversals: number
   readonly status: 'running' | 'complete'
 }
 
