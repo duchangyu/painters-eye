@@ -62,4 +62,28 @@ describe('CalibrationScreen', () => {
     await user.click(screen.getByRole('button', { name: '继续' }))
     expect(screen.getByRole('button', { name: '向上' })).toBeEnabled()
   })
+
+  it('resumes at a previously saved trial without replaying answers', () => {
+    const trials = createCalibrationSchedule({
+      seed: 8,
+      trialsPerAxis: 1,
+      repeatCount: 0,
+    }).map(toPublicTrial)
+    const engine: CalibrationEngine = {
+      trials,
+      recordAnswer: vi.fn(),
+      saveDraft: vi.fn(),
+    }
+
+    render(
+      <CalibrationScreen
+        engine={engine}
+        initialTrialIndex={2}
+        onComplete={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '2')
+    expect(engine.recordAnswer).not.toHaveBeenCalled()
+  })
 })

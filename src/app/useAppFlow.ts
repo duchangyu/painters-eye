@@ -41,6 +41,14 @@ export function useAppFlow() {
     [recordConditions],
   )
 
+  const resumeCalibration = useCallback(
+    (conditions: DisplayConditions) => {
+      recordConditions(conditions)
+      setPhase('calibration')
+    },
+    [recordConditions],
+  )
+
   const restoreProfile = useCallback(
     (conditions: DisplayConditions, needsQuickCheck: boolean) => {
       recordConditions(conditions)
@@ -62,6 +70,7 @@ export function useAppFlow() {
     phase,
     displayConditions,
     beginCalibration,
+    resumeCalibration,
     beginQuickCheck,
     restoreProfile,
     beginValidation,

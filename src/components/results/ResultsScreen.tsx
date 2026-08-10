@@ -68,6 +68,10 @@ export function ResultsScreen({
             {percent(metrics.byCondition.personalized.controlAccuracy)}
           </strong>
         </div>
+        <div>
+          <span>配置置信度</span>
+          <strong>{percent(profile.confidence)}</strong>
+        </div>
       </section>
 
       <aside className="limitations-note">

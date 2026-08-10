@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test'
 import {
+  answerTrial,
   completeCalibrationAndValidation,
   completeDisplaySetup,
 } from './helpers'
@@ -69,4 +70,24 @@ test('keyboard-only users can set up, calibrate, and compare', async ({ page }) 
   await page.keyboard.down('Space')
   await expect(page.locator('.viewer-source')).toHaveClass(/active/)
   await page.keyboard.up('Space')
+})
+
+test('an interrupted calibration resumes at the saved trial', async ({ page }) => {
+  await page.goto('/')
+  await completeDisplaySetup(page)
+  await answerTrial(page, true)
+  await answerTrial(page, true)
+  await expect(page.getByRole('progressbar')).toHaveAttribute(
+    'aria-valuenow',
+    '2',
+  )
+
+  await page.reload()
+  await expect(page.getByRole('progressbar')).toHaveAttribute(
+    'aria-valuenow',
+    '2',
+  )
+  await answerTrial(page, true)
+  await answerTrial(page, true)
+  await expect(page.getByText('独立验证 · 条件已隐藏')).toBeVisible()
 })

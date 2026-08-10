@@ -56,6 +56,8 @@ describe('ResultsScreen', () => {
 
     expect(screen.getByText('42%')).toBeVisible()
     expect(screen.getByText('81%')).toBeVisible()
+    expect(screen.getByText('配置置信度')).toBeVisible()
+    expect(screen.getByText('86%')).toBeVisible()
     expect(
       screen.getByText('这些结果描述当前显示器上的行为表现，不是医学诊断。'),
     ).toBeVisible()

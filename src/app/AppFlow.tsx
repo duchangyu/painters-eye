@@ -10,6 +10,7 @@ import {
 } from '../calibration/quickCheck'
 import type { DisplayConditions, TrialResponse } from '../domain/calibration'
 import type { CalibrationProfileV1 } from '../domain/profile'
+import type { ProfileValidationSummary } from '../domain/profile'
 import { buildCompensationLut, generateLut } from '../color/lut'
 import {
   CalibrationScreen,
@@ -44,10 +45,66 @@ import { useAppFlow } from './useAppFlow'
 import { isE2eMode } from '../config/runtime'
 
 const SELECTED_ARTWORK_KEY = 'color-master:selected-artwork'
+const CALIBRATION_DRAFT_KEY = 'color-master:calibration-draft'
+
+interface StoredCalibrationDraft {
+  readonly seed: number
+  readonly completedTrials: number
+  readonly responses: readonly TrialResponse[]
+}
+
+function loadCalibrationDraft(): StoredCalibrationDraft | null {
+  const serialized = globalThis.window?.localStorage?.getItem(
+    CALIBRATION_DRAFT_KEY,
+  )
+  if (!serialized) return null
+  try {
+    const value = JSON.parse(serialized) as Partial<StoredCalibrationDraft>
+    if (
+      !Number.isInteger(value.seed) ||
+      !Number.isInteger(value.completedTrials) ||
+      value.completedTrials! <= 0 ||
+      !Array.isArray(value.responses) ||
+      value.responses.length < value.completedTrials!
+    ) {
+      return null
+    }
+    return value as StoredCalibrationDraft
+  } catch {
+    return null
+  }
+}
+
+function profileValidationSummary(
+  metrics: ValidationMetrics,
+): ProfileValidationSummary {
+  return {
+    passed: metrics.passed,
+    personalizedAccuracy: metrics.byCondition.personalized.accuracy,
+    originalAccuracy: metrics.byCondition.original.accuracy,
+    genericAccuracy: metrics.byCondition.generic.accuracy,
+    medianReactionTimeMs:
+      metrics.byCondition.personalized.medianReactionTimeMs,
+    originalMedianReactionTimeMs:
+      metrics.byCondition.original.medianReactionTimeMs,
+    genericMedianReactionTimeMs:
+      metrics.byCondition.generic.medianReactionTimeMs,
+    personalizedMedianReactionTimeMs:
+      metrics.byCondition.personalized.medianReactionTimeMs,
+    originalControlAccuracy: metrics.byCondition.original.controlAccuracy,
+    personalizedControlAccuracy:
+      metrics.byCondition.personalized.controlAccuracy,
+    repeatConsistency: metrics.repeatConsistency,
+  }
+}
 
 export function AppFlow() {
   const flow = useAppFlow()
-  const responses = useRef<TrialResponse[]>([])
+  const [calibrationDraft, setCalibrationDraft] =
+    useState<StoredCalibrationDraft | null>(loadCalibrationDraft)
+  const responses = useRef<TrialResponse[]>([
+    ...(calibrationDraft?.responses ?? []),
+  ])
   const validationResponses = useRef<ValidationResponse[]>([])
   const quickCheckResponses = useRef<QuickCheckResponse[]>([])
   const customImageUrl = useRef<string | null>(null)
@@ -61,14 +118,28 @@ export function AppFlow() {
   const [calibrationRun, setCalibrationRun] = useState(0)
   const [selectedArtwork, setSelectedArtwork] =
     useState<ArtworkRecord | null>(null)
-  const calibrationSession = useMemo(
-    () =>
-      createAdaptiveCalibrationSession({
-        seed: 20260810 + calibrationRun,
+  const calibrationSeed =
+    calibrationRun === 0 && calibrationDraft
+      ? calibrationDraft.seed
+      : 20260810 + calibrationRun
+  const calibrationSession = useMemo(() => {
+    const session = createAdaptiveCalibrationSession({
+        seed: calibrationSeed,
         ...(isE2eMode ? { trialsPerAxis: 1, repeatCount: 0 } : {}),
-      }),
-    [calibrationRun],
-  )
+      })
+    if (calibrationRun === 0 && calibrationDraft) {
+      calibrationDraft.responses
+        .slice(0, calibrationDraft.completedTrials)
+        .forEach((response) => {
+          session.recordAnswer({
+            trialId: response.id,
+            selectedDirection: response.selectedDirection,
+            reactionTimeMs: response.reactionTimeMs,
+          })
+        })
+    }
+    return session
+  }, [calibrationDraft, calibrationRun, calibrationSeed])
   const schedule = calibrationSession.scheduledTrials
   const engine = useMemo<CalibrationEngine>(() => {
     return {
@@ -79,8 +150,9 @@ export function AppFlow() {
       },
       saveDraft(completedTrials: number) {
         localStorage.setItem(
-          'color-master:calibration-draft',
+          CALIBRATION_DRAFT_KEY,
           JSON.stringify({
+            seed: calibrationSeed,
             completedTrials,
             responses: responses.current,
             staircases: calibrationSession.staircases(),
@@ -88,7 +160,7 @@ export function AppFlow() {
         )
       },
     }
-  }, [calibrationSession])
+  }, [calibrationSeed, calibrationSession])
   const validationTrials = useMemo(
     () =>
       profile
@@ -175,6 +247,7 @@ export function AppFlow() {
   )
 
   const restoreProfile = flow.restoreProfile
+  const resumeCalibration = flow.resumeCalibration
   useEffect(() => {
     let cancelled = false
 
@@ -196,7 +269,16 @@ export function AppFlow() {
       try {
         const exact = await repository.loadActiveProfile(fingerprint)
         const candidate = exact ?? (await repository.loadMostRecentProfile())
-        if (!candidate || cancelled) return
+        if (cancelled) return
+        if (!candidate) {
+          if (
+            calibrationDraft &&
+            calibrationDraft.completedTrials < calibrationSession.trials.length
+          ) {
+            resumeCalibration(conditions)
+          }
+          return
+        }
         const requirement = quickCheckRequirement({
           profile: candidate,
           currentDisplayFingerprint: fingerprint,
@@ -219,7 +301,12 @@ export function AppFlow() {
     return () => {
       cancelled = true
     }
-  }, [restoreProfile])
+  }, [
+    calibrationDraft,
+    calibrationSession.trials.length,
+    restoreProfile,
+    resumeCalibration,
+  ])
 
   useEffect(
     () => () => {
@@ -231,6 +318,7 @@ export function AppFlow() {
   )
 
   function completeCalibration() {
+    localStorage.removeItem(CALIBRATION_DRAFT_KEY)
     setProfile(fitProfile(responses.current))
     flow.beginValidation()
   }
@@ -264,6 +352,7 @@ export function AppFlow() {
         thresholds: profile.thresholds,
         compensation: profile,
         confidence: profile.confidence,
+        validation: profileValidationSummary(metrics),
         lut: buildCompensationLut(profile),
       }
       const repository = await createProfileRepository()
@@ -286,6 +375,8 @@ export function AppFlow() {
 
   function handleDisplaySetup(conditions: DisplayConditions) {
     if (!activeProfile) {
+      localStorage.removeItem(CALIBRATION_DRAFT_KEY)
+      setCalibrationDraft(null)
       responses.current = []
       validationResponses.current = []
       flow.beginCalibration(conditions)
@@ -339,6 +430,8 @@ export function AppFlow() {
     setProfile(null)
     setMetrics(null)
     setQuickCheckResult(null)
+    localStorage.removeItem(CALIBRATION_DRAFT_KEY)
+    setCalibrationDraft(null)
     setCalibrationRun((value) => value + 1)
     flow.beginCalibration(flow.displayConditions)
   }
@@ -402,6 +495,9 @@ export function AppFlow() {
       <CalibrationScreen
         key="calibration"
         engine={engine}
+        initialTrialIndex={
+          calibrationRun === 0 ? calibrationDraft?.completedTrials : 0
+        }
         onComplete={completeCalibration}
       />
     )
@@ -486,16 +582,8 @@ export function AppFlow() {
         profile={activeProfile}
         validation={
           metrics
-            ? {
-                passed: metrics.passed,
-                personalizedAccuracy:
-                  metrics.byCondition.personalized.accuracy,
-                originalAccuracy: metrics.byCondition.original.accuracy,
-                genericAccuracy: metrics.byCondition.generic.accuracy,
-                medianReactionTimeMs:
-                  metrics.byCondition.personalized.medianReactionTimeMs,
-              }
-            : { passed: true }
+            ? profileValidationSummary(metrics)
+            : activeProfile.validation ?? { passed: true }
         }
         onClose={flow.openGallery}
         onImport={importProfile}

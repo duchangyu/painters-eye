@@ -1,13 +1,10 @@
-import type { CalibrationProfileV1 } from '../domain/profile'
+import type {
+  CalibrationProfileV1,
+  ProfileValidationSummary,
+} from '../domain/profile'
 import { migrateProfile } from './profileRepository'
 
-export interface ValidationSummary {
-  readonly passed: boolean
-  readonly personalizedAccuracy?: number
-  readonly originalAccuracy?: number
-  readonly genericAccuracy?: number
-  readonly medianReactionTimeMs?: number
-}
+export type ValidationSummary = ProfileValidationSummary
 
 interface ProfileFilePayload {
   readonly profile: CalibrationProfileV1

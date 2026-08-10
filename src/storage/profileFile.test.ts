@@ -58,15 +58,17 @@ function profile(): CalibrationProfileV1 {
 
 describe('profile files', () => {
   it('round-trips a checksummed UTF-8 profile and validation summary', async () => {
-    const value = profile()
-    const exported = await exportProfileFile(value, {
+    const validation = {
       passed: true,
       personalizedAccuracy: 0.82,
-    })
+      originalAccuracy: 0.5,
+    }
+    const value = { ...profile(), validation }
+    const exported = await exportProfileFile(value, validation)
     const imported = await importProfileFile(exported)
 
     expect(imported.profile).toEqual(value)
-    expect(imported.validation.passed).toBe(true)
+    expect(imported.validation).toEqual(validation)
   })
 
   it('rejects malformed, unsupported, incomplete, and tampered files', async () => {

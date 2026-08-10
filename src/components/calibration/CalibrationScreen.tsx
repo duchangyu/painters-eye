@@ -27,6 +27,7 @@ export interface CalibrationScreenProps {
   readonly note?: string
   readonly progressName?: string
   readonly testConditionByTrialId?: ReadonlyMap<string, string>
+  readonly initialTrialIndex?: number
 }
 
 const KEY_DIRECTIONS: Readonly<Record<string, TargetDirection>> = {
@@ -44,8 +45,11 @@ export function CalibrationScreen({
   note = '看不清时请凭第一感觉选择；测量过程中不会显示正确答案。',
   progressName = '校准进度',
   testConditionByTrialId,
+  initialTrialIndex = 0,
 }: CalibrationScreenProps) {
-  const [trialIndex, setTrialIndex] = useState(0)
+  const [trialIndex, setTrialIndex] = useState(() =>
+    Math.min(engine.trials.length, Math.max(0, initialTrialIndex)),
+  )
   const [paused, setPaused] = useState(false)
   const startedAt = useRef<number | null>(null)
   const trial = engine.trials[trialIndex]
