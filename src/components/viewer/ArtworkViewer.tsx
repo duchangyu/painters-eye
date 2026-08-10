@@ -232,7 +232,12 @@ export function ArtworkViewer({
             <button
               className="primary-button"
               type="button"
-              onClick={toggleEnhancement}
+              onClick={(event) => {
+                toggleEnhancement()
+                // Move focus off the button so the next Space press peeks at
+                // the original instead of re-activating this button.
+                event.currentTarget.blur()
+              }}
             >
               {enhanced ? '关闭个人增强' : '开启个人增强'}
             </button>
