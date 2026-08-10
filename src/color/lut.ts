@@ -40,11 +40,15 @@ export function generateLut(
   return { size, data }
 }
 
+/**
+ * Builds the compensation LUT at FULL strength. Renderers interpolate
+ * between the original pixel and this LUT by the user's chosen strength,
+ * so baking in `recommendedStrength` would double-apply it and cap the
+ * viewer slider at the recommended value.
+ */
 export function buildCompensationLut(
   parameters: CompensationParameters,
   size = 17,
 ): Lut3D {
-  return generateLut(size, (color) =>
-    compensateColor(color, parameters, parameters.recommendedStrength),
-  )
+  return generateLut(size, (color) => compensateColor(color, parameters, 1))
 }

@@ -38,6 +38,29 @@ export function relativeLuminance(color: SrgbColor): number {
   )
 }
 
+/**
+ * Simulates the user's view under their deficiency. A 'mixed' result means
+ * the calibration could not separate the protan and deutan thresholds, so we
+ * average both red-green simulations explicitly instead of silently assuming
+ * deutan.
+ */
+function simulateDeficiency(
+  color: SrgbColor,
+  deficiency: CompensationParameters['deficiency'],
+  severity: number,
+): SrgbColor {
+  if (deficiency === 'protan' || deficiency === 'deutan') {
+    return simulateCvd(color, deficiency, severity)
+  }
+  const asProtan = simulateCvd(color, 'protan', severity)
+  const asDeutan = simulateCvd(color, 'deutan', severity)
+  return [
+    (asProtan[0] + asDeutan[0]) / 2,
+    (asProtan[1] + asDeutan[1]) / 2,
+    (asProtan[2] + asDeutan[2]) / 2,
+  ]
+}
+
 export function compensateColor(
   color: SrgbColor,
   parameters: CompensationParameters,
@@ -50,9 +73,11 @@ export function compensateColor(
     return color
   }
 
-  const deficiency =
-    parameters.deficiency === 'protan' ? 'protan' : 'deutan'
-  const simulated = simulateCvd(color, deficiency, parameters.severity)
+  const simulated = simulateDeficiency(
+    color,
+    parameters.deficiency,
+    parameters.severity,
+  )
   const originalLab = coordinates(colorFromSrgb(color).to('oklab'))
   const simulatedLab = coordinates(colorFromSrgb(simulated).to('oklab'))
   const lostRedGreen = originalLab[1] - simulatedLab[1]
@@ -115,7 +140,6 @@ export function optimizeCompensation({
   referencePairs = REFERENCE_PAIRS,
   controlPairs = CONTROL_PAIRS,
 }: OptimizeCompensationOptions): CompensationParameters {
-  const simulationDeficiency = deficiency === 'protan' ? 'protan' : 'deutan'
   let best: CompensationParameters | null = null
 
   for (const chromaGain of [0, 0.25, 0.5, 0.75]) {
@@ -135,14 +159,14 @@ export function optimizeCompensation({
       const simulatedSeparation = mean(
         referencePairs.map((pair) =>
           deltaEOk(
-            simulateCvd(
+            simulateDeficiency(
               compensateColor(pair[0], candidate, recommendedStrength),
-              simulationDeficiency,
+              deficiency,
               severity,
             ),
-            simulateCvd(
+            simulateDeficiency(
               compensateColor(pair[1], candidate, recommendedStrength),
-              simulationDeficiency,
+              deficiency,
               severity,
             ),
           ),

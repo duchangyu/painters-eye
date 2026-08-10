@@ -224,7 +224,7 @@ export function AppFlow() {
       originalOnly
         ? generateLut(2, (color) => color)
         : activeProfile
-          ? activeProfile.lut
+          ? buildCompensationLut(activeProfile.compensation)
           : profile
             ? buildCompensationLut(profile)
             : generateLut(2, (color) => color),

@@ -2,11 +2,28 @@ import { describe, expect, it } from 'vitest'
 import type { SrgbColor } from '../domain/calibration'
 import type { CompensationParameters } from '../domain/profile'
 import { simulateCvd } from './machado'
+import { decodeSrgb, encodeSrgb } from './srgb'
 import {
   compensateColor,
   deltaEOk,
   relativeLuminance,
 } from './compensate'
+
+/**
+ * A confusion pair synthesized along the deutan null direction (unit vector
+ * of the 100% Machado matrix null space), around a center that does NOT
+ * appear in the optimizer's REFERENCE_PAIRS — a true held-out pair.
+ */
+function heldOutConfusionPair(): readonly [SrgbColor, SrgbColor] {
+  const center: SrgbColor = [0.55, 0.48, 0.38]
+  const direction = [0.922055, -0.386019, 0.02836] as const
+  const offset = (amount: number): SrgbColor => [
+    Math.min(1, Math.max(0, encodeSrgb(decodeSrgb(center[0]) + direction[0] * amount))),
+    Math.min(1, Math.max(0, encodeSrgb(decodeSrgb(center[1]) + direction[1] * amount))),
+    Math.min(1, Math.max(0, encodeSrgb(decodeSrgb(center[2]) + direction[2] * amount))),
+  ]
+  return [offset(0.05), offset(-0.05)]
+}
 
 const parameters: CompensationParameters = {
   deficiency: 'deutan',
@@ -57,10 +74,7 @@ describe('compensateColor', () => {
   })
 
   it('increases simulated separation for a confusing held-out pair', () => {
-    const pair: readonly [SrgbColor, SrgbColor] = [
-      [0.58, 0.42, 0.2],
-      [0.35, 0.53, 0.2],
-    ]
+    const pair = heldOutConfusionPair()
     const before = deltaEOk(
       simulateCvd(pair[0], 'deutan', parameters.severity),
       simulateCvd(pair[1], 'deutan', parameters.severity),
@@ -78,7 +92,33 @@ describe('compensateColor', () => {
       ),
     )
 
-    expect(after).toBeGreaterThan(before)
+    // The pair lies on the deutan confusion axis: it must be genuinely hard
+    // to separate before compensation, and measurably easier after.
+    expect(before).toBeLessThan(0.05)
+    expect(after).toBeGreaterThan(before * 1.5)
+  })
+
+  it('treats mixed deficiency explicitly instead of assuming deutan', () => {
+    const color: SrgbColor = [0.55, 0.4, 0.3]
+    const mixed = compensateColor(
+      color,
+      { ...parameters, deficiency: 'mixed' },
+      1,
+    )
+    const asDeutan = compensateColor(
+      color,
+      { ...parameters, deficiency: 'deutan' },
+      1,
+    )
+    const asProtan = compensateColor(
+      color,
+      { ...parameters, deficiency: 'protan' },
+      1,
+    )
+
+    expect(mixed).not.toEqual(asDeutan)
+    expect(deltaEOk(mixed, asProtan)).toBeLessThan(deltaEOk(asDeutan, asProtan))
+    expect(deltaEOk(mixed, asDeutan)).toBeLessThan(deltaEOk(asDeutan, asProtan))
   })
 
   it('does not reduce a blue-yellow control pair by more than five percent', () => {
