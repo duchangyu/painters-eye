@@ -1,10 +1,4 @@
-import {
-  useEffect,
-  useRef,
-  useState,
-  type CSSProperties,
-  type KeyboardEvent,
-} from 'react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import type { Lut3D } from '../../color/lut'
 import type { ArtworkRecord } from '../../data/artworks'
 import { renderImageWithCpu } from '../../rendering/cpuRenderer'
@@ -43,9 +37,11 @@ export function ArtworkViewer({
     useState<RendererStatus>('waiting')
 
   useEffect(() => {
-    const renderer = rendererRef.current
     return () => {
-      renderer?.dispose()
+      // Read the ref at cleanup time: capturing it in the closure would
+      // dispose the renderer that existed at setup (often null) and leak
+      // the current WebGL context.
+      rendererRef.current?.dispose()
       rendererRef.current = null
     }
   }, [artwork.id, lut])
@@ -95,20 +91,51 @@ export function ArtworkViewer({
     setEnhanced(true)
   }
 
-  function handleKeyboard(event: KeyboardEvent<HTMLDivElement>) {
-    if (event.code !== 'Space' || !enhanced) {
-      return
+  // Space-to-peek must work no matter where focus rests (most commonly the
+  // "开启个人增强" button the user just clicked), without stealing Space from
+  // interactive controls.
+  useEffect(() => {
+    if (!enhanced) return
+    function isInteractive(target: EventTarget | null): boolean {
+      return (
+        target instanceof HTMLElement &&
+        target.closest(
+          'button, input, select, textarea, a, [contenteditable]',
+        ) !== null
+      )
     }
-    event.preventDefault()
-    setPeeking(event.type === 'keydown')
-  }
+    function onKeyDown(event: globalThis.KeyboardEvent) {
+      if (
+        event.code !== 'Space' ||
+        event.repeat ||
+        isInteractive(event.target)
+      ) {
+        return
+      }
+      event.preventDefault()
+      setPeeking(true)
+    }
+    function onKeyUp(event: globalThis.KeyboardEvent) {
+      if (event.code !== 'Space' || isInteractive(event.target)) return
+      setPeeking(false)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    window.addEventListener('keyup', onKeyUp)
+    return () => {
+      window.removeEventListener('keydown', onKeyDown)
+      window.removeEventListener('keyup', onKeyUp)
+    }
+  }, [enhanced])
 
-  const showOriginal = !enhanced || peeking || strength === 0
-  const statusLabel = peeking
-    ? '按住查看原图'
-    : enhanced
-      ? '个人增强'
-      : '原始数字图像'
+  const renderFailed = enhanced && rendererStatus === 'error'
+  const showOriginal = !enhanced || peeking || strength === 0 || renderFailed
+  const statusLabel = renderFailed
+    ? '增强渲染失败，显示原图'
+    : peeking
+      ? '按住查看原图'
+      : enhanced
+        ? '个人增强'
+        : '原始数字图像'
   const stageStyle = {
     '--artwork-zoom': String(zoom),
     '--artwork-width': `${zoom * 100}%`,
@@ -131,7 +158,11 @@ export function ArtworkViewer({
           <p>{artwork.artist}</p>
         </div>
         <div className="viewer-status" aria-live="polite">
-          <span className={enhanced && !peeking ? 'status-dot active' : 'status-dot'} />
+          <span
+            className={
+              enhanced && !peeking ? 'status-dot active' : 'status-dot'
+            }
+          />
           {statusLabel}
         </div>
       </header>
@@ -147,20 +178,23 @@ export function ArtworkViewer({
           onPointerUp={() => setPeeking(false)}
           onPointerCancel={() => setPeeking(false)}
           onPointerLeave={() => setPeeking(false)}
-          onKeyDown={handleKeyboard}
-          onKeyUp={handleKeyboard}
           aria-label="画作比较区；开启增强后按住空格查看原图"
         >
           {split && (
             <figure className="viewer-panel original-panel">
-              <img src={artwork.imagePath} alt={`${artwork.titleZh}原始数字图像`} />
+              <img
+                src={artwork.imagePath}
+                alt={`${artwork.titleZh}原始数字图像`}
+              />
               <figcaption>原始数字图像</figcaption>
             </figure>
           )}
           <figure className="viewer-panel">
             <img
               ref={imageRef}
-              className={showOriginal ? 'viewer-source active' : 'viewer-source'}
+              className={
+                showOriginal ? 'viewer-source active' : 'viewer-source'
+              }
               src={artwork.imagePath}
               alt={artwork.titleZh}
               onLoad={() => setImageReady(true)}
@@ -183,7 +217,7 @@ export function ArtworkViewer({
               }
               aria-label={`${artwork.titleZh}个人增强图像（兼容模式）`}
             />
-            {!showOriginal && rendererStatus === 'error' && (
+            {renderFailed && (
               <div className="render-warning" role="status">
                 当前浏览器无法渲染增强图像，已保留原图。
               </div>
@@ -195,7 +229,11 @@ export function ArtworkViewer({
         <aside className="viewer-controls" aria-label="查看器控制">
           <div className="control-primary">
             <span>01 · 显示方式</span>
-            <button className="primary-button" type="button" onClick={toggleEnhancement}>
+            <button
+              className="primary-button"
+              type="button"
+              onClick={toggleEnhancement}
+            >
               {enhanced ? '关闭个人增强' : '开启个人增强'}
             </button>
             <small>增强不会修改原始文件，随时可以按住画面或空格键对照。</small>

@@ -45,7 +45,9 @@ import {
   CALIBRATION_SCHEDULE_VERSION,
   clearCalibrationDraft,
   loadCalibrationDraft,
+  removeLocalStorage,
   saveCalibrationDraft,
+  writeLocalStorage,
   type StoredCalibrationDraft,
 } from './calibrationDraft'
 import { useAppFlow } from './useAppFlow'
@@ -61,8 +63,7 @@ function profileValidationSummary(
     personalizedAccuracy: metrics.byCondition.personalized.accuracy,
     originalAccuracy: metrics.byCondition.original.accuracy,
     genericAccuracy: metrics.byCondition.generic.accuracy,
-    medianReactionTimeMs:
-      metrics.byCondition.personalized.medianReactionTimeMs,
+    medianReactionTimeMs: metrics.byCondition.personalized.medianReactionTimeMs,
     originalMedianReactionTimeMs:
       metrics.byCondition.original.medianReactionTimeMs,
     genericMedianReactionTimeMs:
@@ -92,17 +93,18 @@ export function AppFlow() {
     useState<QuickCheckAssessment | null>(null)
   const [originalOnly, setOriginalOnly] = useState(false)
   const [calibrationRun, setCalibrationRun] = useState(0)
-  const [selectedArtwork, setSelectedArtwork] =
-    useState<ArtworkRecord | null>(null)
+  const [selectedArtwork, setSelectedArtwork] = useState<ArtworkRecord | null>(
+    null,
+  )
   const calibrationSeed =
     calibrationRun === 0 && calibrationDraft
       ? calibrationDraft.seed
       : 20260810 + calibrationRun
   const calibration = useMemo(() => {
     const session = createAdaptiveCalibrationSession({
-        seed: calibrationSeed,
-        ...(isE2eMode ? { trialsPerAxis: 1, repeatCount: 0 } : {}),
-      })
+      seed: calibrationSeed,
+      ...(isE2eMode ? { trialsPerAxis: 1, repeatCount: 0 } : {}),
+    })
     let replayed: readonly TrialResponse[] | null = null
     if (calibrationRun === 0 && calibrationDraft) {
       const results = calibrationDraft.responses
@@ -168,7 +170,9 @@ export function AppFlow() {
     [profile, schedule],
   )
   const validationEngine = useMemo<CalibrationEngine>(() => {
-    const trialsById = new Map(validationTrials.map((trial) => [trial.id, trial]))
+    const trialsById = new Map(
+      validationTrials.map((trial) => [trial.id, trial]),
+    )
     return {
       trials: validationTrials.map(toPublicValidationTrial),
       recordAnswer(answer: CalibrationAnswer) {
@@ -184,7 +188,7 @@ export function AppFlow() {
         })
       },
       saveDraft(completedTrials: number) {
-        localStorage.setItem(
+        writeLocalStorage(
           'color-master:validation-draft',
           JSON.stringify({
             completedTrials,
@@ -195,8 +199,7 @@ export function AppFlow() {
     }
   }, [validationTrials])
   const validationTestConditions = useMemo(
-    () =>
-      new Map(validationTrials.map((trial) => [trial.id, trial.condition])),
+    () => new Map(validationTrials.map((trial) => [trial.id, trial.condition])),
     [validationTrials],
   )
   const quickCheckTrials = useMemo(
@@ -205,7 +208,9 @@ export function AppFlow() {
     [activeProfile],
   )
   const quickCheckEngine = useMemo<CalibrationEngine>(() => {
-    const trialsById = new Map(quickCheckTrials.map((trial) => [trial.id, trial]))
+    const trialsById = new Map(
+      quickCheckTrials.map((trial) => [trial.id, trial]),
+    )
     return {
       trials: quickCheckTrials,
       recordAnswer(answer: CalibrationAnswer) {
@@ -218,7 +223,7 @@ export function AppFlow() {
         )
       },
       saveDraft(completedTrials: number) {
-        localStorage.setItem(
+        writeLocalStorage(
           'color-master:quick-check-draft',
           JSON.stringify({
             completedTrials,
@@ -355,10 +360,7 @@ export function AppFlow() {
         await repository.promoteValidatedProfile(value)
         setActiveProfile(value)
         setOriginalOnly(false)
-        localStorage.setItem(
-          `color-master:quick-check:${value.id}`,
-          createdAt,
-        )
+        writeLocalStorage(`color-master:quick-check:${value.id}`, createdAt)
       } finally {
         repository.close()
       }
@@ -389,7 +391,7 @@ export function AppFlow() {
     if (result.status !== 'pass') {
       // Record the attempt even on failure: without a timestamp the next
       // launch forces the same check again forever.
-      localStorage.setItem(
+      writeLocalStorage(
         `color-master:quick-check:${activeProfile.id}`,
         new Date().toISOString(),
       )
@@ -413,7 +415,7 @@ export function AppFlow() {
       await repository.promoteValidatedProfile(verifiedProfile)
       setActiveProfile(verifiedProfile)
       setOriginalOnly(false)
-      localStorage.setItem(
+      writeLocalStorage(
         `color-master:quick-check:${verifiedProfile.id}`,
         checkedAt,
       )
@@ -471,7 +473,7 @@ export function AppFlow() {
     }
     const imagePath = URL.createObjectURL(file)
     customImageUrl.current = imagePath
-    localStorage.removeItem(SELECTED_ARTWORK_KEY)
+    removeLocalStorage(SELECTED_ARTWORK_KEY)
     setSelectedArtwork({
       id: `personal-${file.name}`,
       titleZh: file.name,
@@ -489,12 +491,12 @@ export function AppFlow() {
   }
 
   function openArtwork(artwork: ArtworkRecord) {
-    localStorage.setItem(SELECTED_ARTWORK_KEY, artwork.id)
+    writeLocalStorage(SELECTED_ARTWORK_KEY, artwork.id)
     setSelectedArtwork(artwork)
   }
 
   function closeArtwork() {
-    localStorage.removeItem(SELECTED_ARTWORK_KEY)
+    removeLocalStorage(SELECTED_ARTWORK_KEY)
     setSelectedArtwork(null)
   }
 
@@ -539,6 +541,7 @@ export function AppFlow() {
         profile={profile}
         metrics={metrics}
         onContinue={saveProfileAndContinue}
+        onRecalibrate={restartCalibration}
       />
     )
   }
@@ -570,13 +573,22 @@ export function AppFlow() {
         </h1>
         <p>
           目标轴正确率 {Math.round(quickCheckResult.dominantAccuracy * 100)}%，
-          控制轴正确率 {Math.round(quickCheckResult.controlAccuracy * 100)}%。旧配置仍然保留。
+          控制轴正确率 {Math.round(quickCheckResult.controlAccuracy * 100)}
+          %。旧配置仍然保留。
         </p>
         <div className="quick-check-actions">
-          <button className="primary-button" type="button" onClick={flow.reviewDisplay}>
+          <button
+            className="primary-button"
+            type="button"
+            onClick={flow.reviewDisplay}
+          >
             检查显示设置
           </button>
-          <button className="quiet-button" type="button" onClick={restartCalibration}>
+          <button
+            className="quiet-button"
+            type="button"
+            onClick={restartCalibration}
+          >
             重新完整校准
           </button>
           <button
@@ -600,7 +612,7 @@ export function AppFlow() {
         validation={
           metrics
             ? profileValidationSummary(metrics)
-            : activeProfile.validation ?? { passed: true }
+            : (activeProfile.validation ?? { passed: true })
         }
         onClose={flow.openGallery}
         onImport={importProfile}
@@ -618,9 +630,9 @@ export function AppFlow() {
           recommendedStrength={
             originalOnly
               ? 0
-              : activeProfile?.compensation.recommendedStrength ??
+              : (activeProfile?.compensation.recommendedStrength ??
                 profile?.recommendedStrength ??
-                0
+                0)
           }
           onBack={closeArtwork}
         />

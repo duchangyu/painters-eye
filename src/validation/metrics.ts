@@ -44,7 +44,9 @@ function metricsFor(
   responses: readonly ValidationResponse[],
   condition: ValidationCondition,
 ): ConditionMetrics {
-  const selected = responses.filter((response) => response.condition === condition)
+  const selected = responses.filter(
+    (response) => response.condition === condition,
+  )
   const controls = selected.filter(
     (response) =>
       response.axis === 'blue-yellow-control' ||
@@ -55,13 +57,15 @@ function metricsFor(
     medianReactionTimeMs: median(
       selected.map((response) => response.reactionTimeMs),
     ),
-    controlAccuracy: mean(controls.map((response) => (response.correct ? 1 : 0))),
+    controlAccuracy: mean(
+      controls.map((response) => (response.correct ? 1 : 0)),
+    ),
   }
 }
 
 export function summarizeValidation(
   responses: readonly ValidationResponse[],
-  repeatConsistency = 1,
+  repeatConsistency: number,
 ): ValidationMetrics {
   const byCondition = {
     original: metricsFor(responses, 'original'),

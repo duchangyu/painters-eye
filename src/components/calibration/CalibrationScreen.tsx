@@ -1,7 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type {
-  PublicCalibrationTrial,
-} from '../../calibration/session'
+import type { PublicCalibrationTrial } from '../../calibration/session'
 import type { TargetDirection } from '../../domain/calibration'
 import { ProgressBar } from '../common/ProgressBar'
 import { PlateCanvas } from './PlateCanvas'
@@ -54,9 +52,13 @@ export function CalibrationScreen({
   const startedAt = useRef<number | null>(null)
   const trial = engine.trials[trialIndex]
 
+  // Restart the reaction-time clock whenever a pause ends (and on mount):
+  // time spent looking at the pause overlay must not count as hesitation.
   useEffect(() => {
-    startedAt.current = performance.now()
-  }, [])
+    if (!paused) {
+      startedAt.current = performance.now()
+    }
+  }, [paused])
 
   const answer = useCallback(
     (direction: TargetDirection) => {
@@ -151,9 +153,7 @@ export function CalibrationScreen({
         />
       </section>
 
-      <p className="measurement-note">
-        {note}
-      </p>
+      <p className="measurement-note">{note}</p>
     </main>
   )
 }

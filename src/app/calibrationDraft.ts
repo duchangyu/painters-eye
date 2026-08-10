@@ -84,11 +84,38 @@ export function saveCalibrationDraft(
   draft: StoredCalibrationDraft,
   storage: DraftStorage | undefined = defaultStorage(),
 ): void {
-  storage?.setItem(CALIBRATION_DRAFT_KEY, JSON.stringify(draft))
+  try {
+    storage?.setItem(CALIBRATION_DRAFT_KEY, JSON.stringify(draft))
+  } catch {
+    // Drafts are best-effort: quota or privacy-mode failures must not
+    // interrupt an in-progress calibration.
+  }
 }
 
 export function clearCalibrationDraft(
   storage: DraftStorage | undefined = defaultStorage(),
 ): void {
-  storage?.removeItem(CALIBRATION_DRAFT_KEY)
+  try {
+    storage?.removeItem(CALIBRATION_DRAFT_KEY)
+  } catch {
+    // Best-effort, same rationale as saveCalibrationDraft.
+  }
+}
+
+/** Best-effort localStorage write for non-critical UI state. */
+export function writeLocalStorage(key: string, value: string): void {
+  try {
+    defaultStorage()?.setItem(key, value)
+  } catch {
+    // Non-critical persistence; ignore quota/privacy failures.
+  }
+}
+
+/** Best-effort localStorage removal for non-critical UI state. */
+export function removeLocalStorage(key: string): void {
+  try {
+    defaultStorage()?.removeItem(key)
+  } catch {
+    // Non-critical persistence; ignore quota/privacy failures.
+  }
 }
