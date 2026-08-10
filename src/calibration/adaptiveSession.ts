@@ -33,10 +33,6 @@ export const AXIS_STEP_SIZE: Readonly<Record<ConfusionAxis, number>> = {
   'luminance-control': 0.01,
 }
 
-type Mutable<T> = { -readonly [Key in keyof T]: T[Key] }
-type MutableScheduledTrial = Mutable<ScheduledCalibrationTrial>
-type MutablePublicTrial = Mutable<PublicCalibrationTrial>
-
 export interface AdaptiveAnswer {
   readonly trialId: string
   readonly selectedDirection: TargetDirection
@@ -74,55 +70,57 @@ export function createAdaptiveCalibrationSession({
   trialsPerAxis = 12,
   repeatCount = 8,
 }: CreateAdaptiveCalibrationSessionOptions): AdaptiveCalibrationSession {
-  const scheduled = createCalibrationSchedule({
-    seed,
-    trialsPerAxis,
-    repeatCount,
-  }).map((trial) => ({ ...trial })) as MutableScheduledTrial[]
-  const publicTrials = scheduled.map((trial) => ({
-    id: trial.id,
-    stimulus: trial.stimulus,
-  })) as MutablePublicTrial[]
-  const scheduledById = new Map(scheduled.map((trial) => [trial.id, trial]))
-  const publicById = new Map(publicTrials.map((trial) => [trial.id, trial]))
-  const indexById = new Map(scheduled.map((trial, index) => [trial.id, index]))
+  let scheduled: readonly ScheduledCalibrationTrial[] =
+    createCalibrationSchedule({ seed, trialsPerAxis, repeatCount })
+  let publicTrials: readonly PublicCalibrationTrial[] = scheduled.map(
+    (trial) => ({ id: trial.id, stimulus: trial.stimulus }),
+  )
   const states = new Map(
     AXES.map((axis) => [axis, createAxisStaircase(axis, trialsPerAxis)]),
   )
   const answered = new Set<string>()
 
+  /**
+   * Rebuilds the schedule with `trialId` (and its repeats) re-rendered at
+   * `delta`. Produces new trial objects instead of mutating in place, so
+   * consumers always read a consistent, immutable snapshot.
+   */
   function replaceStimulus(trialId: string, delta: number) {
-    const trial = scheduledById.get(trialId)
-    const publicTrial = publicById.get(trialId)
-    if (!trial || !publicTrial) return
+    const trial = scheduled.find((candidate) => candidate.id === trialId)
+    if (!trial) return
     const stimulus = createStimulus({
       seed: trial.stimulus.seed,
       axis: trial.stimulus.axis,
       delta,
     })
-    trial.stimulus = stimulus
-    publicTrial.stimulus = stimulus
-
-    scheduled
-      .filter((candidate) => candidate.repeatedFromTrialId === trialId)
-      .forEach((repeat) => {
-        repeat.stimulus = stimulus
-        const publicRepeat = publicById.get(repeat.id)
-        if (publicRepeat) publicRepeat.stimulus = stimulus
-      })
+    const replacedIds = new Set<string>([
+      trialId,
+      ...scheduled
+        .filter((candidate) => candidate.repeatedFromTrialId === trialId)
+        .map((repeat) => repeat.id),
+    ])
+    scheduled = scheduled.map((candidate) =>
+      replacedIds.has(candidate.id) ? { ...candidate, stimulus } : candidate,
+    )
+    publicTrials = publicTrials.map((candidate) =>
+      replacedIds.has(candidate.id) ? { ...candidate, stimulus } : candidate,
+    )
   }
 
   for (const axis of AXES) {
     const first = scheduled.find(
-      (trial) =>
-        !trial.repeatedFromTrialId && trial.stimulus.axis === axis,
+      (trial) => !trial.repeatedFromTrialId && trial.stimulus.axis === axis,
     )
     if (first) replaceStimulus(first.id, START_DELTA[axis])
   }
 
   function recordAnswer(answer: AdaptiveAnswer): TrialResponse | undefined {
-    const trial = scheduledById.get(answer.trialId)
-    if (!trial || answered.has(answer.trialId)) return undefined
+    if (answered.has(answer.trialId)) return undefined
+    const index = scheduled.findIndex(
+      (candidate) => candidate.id === answer.trialId,
+    )
+    if (index < 0) return undefined
+    const trial = scheduled[index]!
     answered.add(answer.trialId)
     const correct = answer.selectedDirection === trial.stimulus.direction
     const response: TrialResponse = {
@@ -139,10 +137,9 @@ export function createAdaptiveCalibrationSession({
       const state = states.get(trial.stimulus.axis)!
       const nextState = updateStaircase(state, correct)
       states.set(trial.stimulus.axis, nextState)
-      const currentIndex = indexById.get(trial.id)!
       const next = scheduled.find(
-        (candidate, index) =>
-          index > currentIndex &&
+        (candidate, candidateIndex) =>
+          candidateIndex > index &&
           !candidate.repeatedFromTrialId &&
           candidate.stimulus.axis === trial.stimulus.axis,
       )
@@ -153,8 +150,12 @@ export function createAdaptiveCalibrationSession({
   }
 
   return {
-    trials: publicTrials,
-    scheduledTrials: scheduled,
+    get trials() {
+      return publicTrials
+    },
+    get scheduledTrials() {
+      return scheduled
+    },
     recordAnswer,
     staircases: () => AXES.map((axis) => states.get(axis)!),
   }

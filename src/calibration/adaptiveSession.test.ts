@@ -5,6 +5,15 @@ function directionFor(session: ReturnType<typeof createAdaptiveCalibrationSessio
   return session.trials.find((trial) => trial.id === id)!.stimulus.direction
 }
 
+// Trials are replaced immutably as staircases adapt, so always re-read the
+// session instead of holding on to an earlier snapshot.
+function axisTrials(
+  session: ReturnType<typeof createAdaptiveCalibrationSession>,
+  axis: string,
+) {
+  return session.trials.filter((trial) => trial.stimulus.axis === axis)
+}
+
 describe('adaptive calibration session', () => {
   it('feeds answers back into later trials on the same axis', () => {
     const session = createAdaptiveCalibrationSession({
@@ -12,24 +21,25 @@ describe('adaptive calibration session', () => {
       trialsPerAxis: 3,
       repeatCount: 0,
     })
-    const protan = session.trials.filter(
-      (trial) => trial.stimulus.axis === 'protan',
+    const firstDelta = axisTrials(session, 'protan')[0]!.stimulus.delta
+
+    const first = axisTrials(session, 'protan')[0]!
+    session.recordAnswer({
+      trialId: first.id,
+      selectedDirection: directionFor(session, first.id),
+      reactionTimeMs: 500,
+    })
+    expect(axisTrials(session, 'protan')[1]!.stimulus.delta).toBe(firstDelta)
+
+    const second = axisTrials(session, 'protan')[1]!
+    session.recordAnswer({
+      trialId: second.id,
+      selectedDirection: directionFor(session, second.id),
+      reactionTimeMs: 500,
+    })
+    expect(axisTrials(session, 'protan')[2]!.stimulus.delta).toBeLessThan(
+      firstDelta,
     )
-    const firstDelta = protan[0]!.stimulus.delta
-
-    session.recordAnswer({
-      trialId: protan[0]!.id,
-      selectedDirection: directionFor(session, protan[0]!.id),
-      reactionTimeMs: 500,
-    })
-    expect(protan[1]!.stimulus.delta).toBe(firstDelta)
-
-    session.recordAnswer({
-      trialId: protan[1]!.id,
-      selectedDirection: directionFor(session, protan[1]!.id),
-      reactionTimeMs: 500,
-    })
-    expect(protan[2]!.stimulus.delta).toBeLessThan(firstDelta)
   })
 
   it('raises the next delta after an incorrect answer', () => {
@@ -38,19 +48,19 @@ describe('adaptive calibration session', () => {
       trialsPerAxis: 2,
       repeatCount: 0,
     })
-    const deutan = session.trials.filter(
-      (trial) => trial.stimulus.axis === 'deutan',
-    )
-    const firstDelta = deutan[0]!.stimulus.delta
-    const correct = directionFor(session, deutan[0]!.id)
+    const first = axisTrials(session, 'deutan')[0]!
+    const firstDelta = first.stimulus.delta
+    const correct = directionFor(session, first.id)
     const incorrect = correct === 'up' ? 'right' : 'up'
 
     session.recordAnswer({
-      trialId: deutan[0]!.id,
+      trialId: first.id,
       selectedDirection: incorrect,
       reactionTimeMs: 500,
     })
-    expect(deutan[1]!.stimulus.delta).toBeGreaterThan(firstDelta)
+    expect(axisTrials(session, 'deutan')[1]!.stimulus.delta).toBeGreaterThan(
+      firstDelta,
+    )
   })
 
   it('keeps seeded repeats pixel-identical to their hidden source', () => {

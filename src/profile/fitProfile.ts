@@ -1,5 +1,6 @@
 import type {
   ConfusionAxis,
+  StaircaseState,
   TrialResponse,
 } from '../domain/calibration'
 import type {
@@ -7,7 +8,6 @@ import type {
   ThresholdEstimate,
 } from '../domain/profile'
 import { optimizeCompensation } from '../color/compensate'
-import { AXIS_STEP_SIZE } from '../calibration/adaptiveSession'
 
 const TARGET_AXES = ['protan', 'deutan'] as const
 const CONTROL_AXES = [
@@ -36,33 +36,25 @@ function mean(values: readonly number[]): number {
     : values.reduce((sum, value) => sum + value, 0) / values.length
 }
 
+/**
+ * Estimates the threshold for one axis from the staircase that drove it.
+ *
+ * The staircase's recorded reversal deltas are the evidence (median of the
+ * last six); when the staircase reversed fewer than twice, we fall back to
+ * per-trial performance estimates nudged by half of the staircase's own step
+ * size. Trials are only used here for the fallback and sanity checks — the
+ * 2-down-1-up rule is NOT replayed (that logic lives in staircase.ts).
+ */
 function estimateAxis(
   trials: readonly TrialResponse[],
-  axis: ConfusionAxis,
+  staircase: StaircaseState,
 ): ThresholdEstimate {
+  const axis = staircase.axis
   const selected = trials.filter(
-    (trial) =>
-      trial.stimulus.axis === axis && !trial.repeatedFromTrialId,
+    (trial) => trial.stimulus.axis === axis && !trial.repeatedFromTrialId,
   )
   if (selected.length === 0) {
     throw new RangeError(`cannot estimate ${axis} without trials`)
-  }
-  let consecutiveCorrect = 0
-  let lastMovement: 'up' | 'down' | null = null
-  const reversalDeltas: number[] = []
-  for (const trial of selected) {
-    consecutiveCorrect = trial.correct ? consecutiveCorrect + 1 : 0
-    const movement = trial.correct
-      ? consecutiveCorrect >= 2
-        ? 'down'
-        : null
-      : 'up'
-    if (!movement) continue
-    if (lastMovement && movement !== lastMovement) {
-      reversalDeltas.push(trial.stimulus.delta)
-    }
-    lastMovement = movement
-    consecutiveCorrect = 0
   }
   const performanceEstimates = selected.slice(-6).map((trial) =>
     Math.min(
@@ -70,10 +62,11 @@ function estimateAxis(
       Math.max(
         0.005,
         trial.stimulus.delta +
-          (trial.correct ? -1 : 1) * AXIS_STEP_SIZE[axis] * 0.5,
+          (trial.correct ? -1 : 1) * staircase.stepSize * 0.5,
       ),
     ),
   )
+  const reversalDeltas = staircase.reversals
   const evidence =
     reversalDeltas.length >= 2
       ? reversalDeltas.slice(-6)
@@ -118,10 +111,18 @@ export interface FittedBehavioralProfile extends CompensationParameters {
 
 export function fitProfile(
   trials: readonly TrialResponse[],
+  staircases: readonly StaircaseState[],
 ): FittedBehavioralProfile {
-  const thresholds = [...TARGET_AXES, ...CONTROL_AXES].map((axis) =>
-    estimateAxis(trials, axis),
+  const staircaseByAxis = new Map(
+    staircases.map((staircase) => [staircase.axis, staircase]),
   )
+  const thresholds = [...TARGET_AXES, ...CONTROL_AXES].map((axis) => {
+    const staircase = staircaseByAxis.get(axis)
+    if (!staircase) {
+      throw new RangeError(`no staircase recorded for ${axis}`)
+    }
+    return estimateAxis(trials, staircase)
+  })
   const protan = thresholds[0]!
   const deutan = thresholds[1]!
   const controlThreshold = median([thresholds[2]!.delta, thresholds[3]!.delta])

@@ -143,7 +143,9 @@ export function AppFlow() {
   const schedule = calibrationSession.scheduledTrials
   const engine = useMemo<CalibrationEngine>(() => {
     return {
-      trials: calibrationSession.trials,
+      get trials() {
+        return calibrationSession.trials
+      },
       recordAnswer(answer: CalibrationAnswer) {
         const response = calibrationSession.recordAnswer(answer)
         if (response) responses.current.push(response)
@@ -319,7 +321,7 @@ export function AppFlow() {
 
   function completeCalibration() {
     localStorage.removeItem(CALIBRATION_DRAFT_KEY)
-    setProfile(fitProfile(responses.current))
+    setProfile(fitProfile(responses.current, calibrationSession.staircases()))
     flow.beginValidation()
   }
 
