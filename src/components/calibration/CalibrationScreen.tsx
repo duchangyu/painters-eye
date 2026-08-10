@@ -5,6 +5,7 @@ import type {
 import type { TargetDirection } from '../../domain/calibration'
 import { ProgressBar } from '../common/ProgressBar'
 import { PlateCanvas } from './PlateCanvas'
+import { isE2eMode } from '../../config/runtime'
 
 export interface CalibrationAnswer {
   readonly trialId: string
@@ -25,6 +26,7 @@ export interface CalibrationScreenProps {
   readonly title?: string
   readonly note?: string
   readonly progressName?: string
+  readonly testConditionByTrialId?: ReadonlyMap<string, string>
 }
 
 const KEY_DIRECTIONS: Readonly<Record<string, TargetDirection>> = {
@@ -41,6 +43,7 @@ export function CalibrationScreen({
   title = '辨认开口方向',
   note = '看不清时请凭第一感觉选择；测量过程中不会显示正确答案。',
   progressName = '校准进度',
+  testConditionByTrialId,
 }: CalibrationScreenProps) {
   const [trialIndex, setTrialIndex] = useState(0)
   const [paused, setPaused] = useState(false)
@@ -120,7 +123,15 @@ export function CalibrationScreen({
         label={`${progressName} ${trialIndex}/${engine.trials.length}`}
       />
 
-      <section className="instrument-stage" aria-live="polite">
+      <section
+        className="instrument-stage"
+        aria-live="polite"
+        data-e2e-trial-id={isE2eMode ? trial.id : undefined}
+        data-e2e-direction={isE2eMode ? trial.stimulus.direction : undefined}
+        data-e2e-condition={
+          isE2eMode ? testConditionByTrialId?.get(trial.id) : undefined
+        }
+      >
         {paused && (
           <div className="pause-overlay">
             <p>校准已暂停</p>

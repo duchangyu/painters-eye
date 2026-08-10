@@ -24,7 +24,7 @@ import { ProfileSettings } from '../components/profile/ProfileSettings'
 import { ResultsScreen } from '../components/results/ResultsScreen'
 import { DisplaySetup } from '../components/setup/DisplaySetup'
 import { ArtworkViewer } from '../components/viewer/ArtworkViewer'
-import { ARTWORKS, type ArtworkRecord } from '../data/artworks'
+import { ARTWORKS, findArtwork, type ArtworkRecord } from '../data/artworks'
 import { fitProfile, type FittedBehavioralProfile } from '../profile/fitProfile'
 import {
   createDisplayFingerprint,
@@ -40,6 +40,9 @@ import {
   toPublicValidationTrial,
 } from '../validation/validationSession'
 import { useAppFlow } from './useAppFlow'
+import { isE2eMode } from '../config/runtime'
+
+const SELECTED_ARTWORK_KEY = 'color-master:selected-artwork'
 
 export function AppFlow() {
   const flow = useAppFlow()
@@ -57,7 +60,11 @@ export function AppFlow() {
   const [selectedArtwork, setSelectedArtwork] =
     useState<ArtworkRecord | null>(null)
   const schedule = useMemo(
-    () => createCalibrationSchedule({ seed: 20260810 }),
+    () =>
+      createCalibrationSchedule({
+        seed: 20260810,
+        ...(isE2eMode ? { trialsPerAxis: 1, repeatCount: 0 } : {}),
+      }),
     [],
   )
   const engine = useMemo<CalibrationEngine>(() => {
@@ -94,6 +101,7 @@ export function AppFlow() {
             seed: 20260811,
             personalized: profile,
             excludedSeeds: schedule.map((trial) => trial.stimulus.seed),
+            ...(isE2eMode ? { trialsPerCondition: 4 } : {}),
           })
         : [],
     [profile, schedule],
@@ -125,6 +133,11 @@ export function AppFlow() {
       },
     }
   }, [validationTrials])
+  const validationTestConditions = useMemo(
+    () =>
+      new Map(validationTrials.map((trial) => [trial.id, trial.condition])),
+    [validationTrials],
+  )
   const quickCheckTrials = useMemo(
     () =>
       activeProfile ? createQuickCheckTrials(activeProfile, 20260812) : [],
@@ -197,6 +210,10 @@ export function AppFlow() {
           ),
         })
         setActiveProfile(candidate)
+        const rememberedArtwork = findArtwork(
+          browserStorage.getItem(SELECTED_ARTWORK_KEY) ?? '',
+        )
+        if (rememberedArtwork) setSelectedArtwork(rememberedArtwork)
         restoreProfile(conditions, requirement !== 'not-due')
       } finally {
         repository.close()
@@ -343,6 +360,7 @@ export function AppFlow() {
     }
     const imagePath = URL.createObjectURL(file)
     customImageUrl.current = imagePath
+    localStorage.removeItem(SELECTED_ARTWORK_KEY)
     setSelectedArtwork({
       id: `personal-${file.name}`,
       titleZh: file.name,
@@ -359,6 +377,16 @@ export function AppFlow() {
     })
   }
 
+  function openArtwork(artwork: ArtworkRecord) {
+    localStorage.setItem(SELECTED_ARTWORK_KEY, artwork.id)
+    setSelectedArtwork(artwork)
+  }
+
+  function closeArtwork() {
+    localStorage.removeItem(SELECTED_ARTWORK_KEY)
+    setSelectedArtwork(null)
+  }
+
   if (flow.phase === 'setup') {
     return (
       <DisplaySetup
@@ -370,18 +398,24 @@ export function AppFlow() {
   }
   if (flow.phase === 'calibration') {
     return (
-      <CalibrationScreen engine={engine} onComplete={completeCalibration} />
+      <CalibrationScreen
+        key="calibration"
+        engine={engine}
+        onComplete={completeCalibration}
+      />
     )
   }
   if (flow.phase === 'validation') {
     return (
       <CalibrationScreen
+        key="validation"
         engine={validationEngine}
         onComplete={completeValidation}
         eyebrow="独立验证 · 条件已隐藏"
         title="再辨认一组新图形"
         progressName="验证进度"
         note="三种显示方式会随机出现；界面不会提示当前条件或正确答案。"
+        testConditionByTrialId={validationTestConditions}
       />
     )
   }
@@ -397,6 +431,7 @@ export function AppFlow() {
   if (flow.phase === 'quick-check' && activeProfile) {
     return (
       <CalibrationScreen
+        key="quick-check"
         engine={quickCheckEngine}
         onComplete={() => void completeQuickCheck()}
         eyebrow="配置短复核 · 8 题"
@@ -481,14 +516,14 @@ export function AppFlow() {
                 profile?.recommendedStrength ??
                 0
           }
-          onBack={() => setSelectedArtwork(null)}
+          onBack={closeArtwork}
         />
       )
     }
     return (
       <GalleryScreen
         artworks={ARTWORKS}
-        onSelect={setSelectedArtwork}
+        onSelect={openArtwork}
         onUpload={openPersonalImage}
         onOpenProfile={activeProfile ? flow.openProfile : undefined}
       />
