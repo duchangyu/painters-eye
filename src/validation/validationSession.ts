@@ -5,7 +5,10 @@ import type {
   SrgbColor,
   Stimulus,
 } from '../domain/calibration'
-import type { CompensationParameters } from '../domain/profile'
+import type {
+  CompensationParameters,
+  ThresholdEstimate,
+} from '../domain/profile'
 import { createSeededRandom } from '../lib/random'
 
 export type ValidationCondition = 'original' | 'generic' | 'personalized'
@@ -24,6 +27,12 @@ export interface PublicValidationTrial {
 export interface CreateValidationSessionOptions {
   readonly seed: number
   readonly personalized: CompensationParameters
+  /**
+   * Fitted per-axis thresholds from calibration. Each paired stimulus is
+   * rendered at a fixed multiple of the user's own threshold for that axis,
+   * so difficulty tracks the individual instead of a population constant.
+   */
+  readonly thresholds: readonly ThresholdEstimate[]
   readonly trialsPerCondition?: number
   readonly excludedSeeds?: readonly number[]
 }
@@ -40,6 +49,14 @@ const AXES: readonly ConfusionAxis[] = [
   'blue-yellow-control',
   'luminance-control',
 ]
+
+/**
+ * Paired trials sit just above the measured threshold: hard enough to
+ * discriminate the conditions, easy enough to stay answerable.
+ */
+const DIFFICULTY_FACTOR = 1.25
+const MIN_DELTA = 0.005
+const MAX_DELTA = 0.25
 
 function mapStimulus(
   stimulus: Stimulus,
@@ -75,9 +92,13 @@ function shuffle<T>(values: readonly T[], random: () => number): T[] {
 export function createValidationSession({
   seed,
   personalized,
+  thresholds,
   trialsPerCondition = 8,
   excludedSeeds = [],
 }: CreateValidationSessionOptions): readonly ValidationTrial[] {
+  const thresholdByAxis = new Map(
+    thresholds.map((threshold) => [threshold.axis, threshold.delta]),
+  )
   const excluded = new Set(excludedSeeds)
   const generic: CompensationParameters = {
     deficiency: personalized.deficiency,
@@ -89,17 +110,25 @@ export function createValidationSession({
   let stimulusSeed = (seed >>> 0) * 1000 + 1_000_000
   const trials: ValidationTrial[] = []
 
-  CONDITIONS.forEach((condition, conditionIndex) => {
-    for (let index = 0; index < trialsPerCondition; index += 1) {
-      while (excluded.has(stimulusSeed)) {
-        stimulusSeed += 1
-      }
-      const axis = AXES[index % AXES.length]!
-      const original = createStimulus({
-        seed: stimulusSeed,
-        axis,
-        delta: axis === 'luminance-control' ? 0.03 : 0.065,
-      })
+  // Paired design: every slot contributes the SAME underlying stimulus under
+  // all three conditions (identical seed, axis, delta, gap direction, dot
+  // geometry; only the color transform differs). Accuracy differences then
+  // reflect the transform, not the luck of drawing different stimuli.
+  for (let slot = 0; slot < trialsPerCondition; slot += 1) {
+    while (excluded.has(stimulusSeed)) {
+      stimulusSeed += 1
+    }
+    const axis = AXES[slot % AXES.length]!
+    const threshold = thresholdByAxis.get(axis)
+    if (threshold === undefined) {
+      throw new RangeError(`no fitted threshold available for ${axis}`)
+    }
+    const delta = Math.min(
+      MAX_DELTA,
+      Math.max(MIN_DELTA, threshold * DIFFICULTY_FACTOR),
+    )
+    const original = createStimulus({ seed: stimulusSeed, axis, delta })
+    for (const condition of CONDITIONS) {
       const stimulus =
         condition === 'original'
           ? original
@@ -110,13 +139,13 @@ export function createValidationSession({
               ),
             )
       trials.push({
-        id: `validation-${conditionIndex}-${index}`,
+        id: `validation-${slot}-${condition}`,
         stimulus,
         condition,
       })
-      stimulusSeed += 1
     }
-  })
+    stimulusSeed += 1
+  }
 
   return shuffle(trials, createSeededRandom(seed + 17))
 }

@@ -151,6 +151,7 @@ export function AppFlow() {
         ? createValidationSession({
             seed: 20260811,
             personalized: profile,
+            thresholds: profile.thresholds,
             excludedSeeds: schedule.map((trial) => trial.stimulus.seed),
             ...(isE2eMode ? { trialsPerCondition: 4 } : {}),
           })
