@@ -28,7 +28,7 @@ const responses: readonly ValidationResponse[] = [
 
 describe('validation metrics', () => {
   it('computes accuracy, median time, and improvement deltas', () => {
-    const summary = summarizeValidation(responses)
+    const summary = summarizeValidation(responses, 0.9)
     expect(summary.byCondition.original.accuracy).toBeCloseTo(2 / 3)
     expect(summary.byCondition.personalized.medianReactionTimeMs).toBe(850)
     expect(summary.accuracyImprovement).toBeGreaterThan(0)
@@ -36,6 +36,6 @@ describe('validation metrics', () => {
   })
 
   it('passes only when personalization wins without damaging controls', () => {
-    expect(evaluateValidation(summarizeValidation(responses)).passed).toBe(true)
+    expect(evaluateValidation(summarizeValidation(responses, 0.9)).passed).toBe(true)
   })
 })

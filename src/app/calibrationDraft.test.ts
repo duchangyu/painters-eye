@@ -64,8 +64,8 @@ describe('calibration draft persistence', () => {
   })
 
   it('rejects drafts from before versioning existed', () => {
-    const legacy = validDraft() as Partial<StoredCalibrationDraft>
-    delete legacy.version
+    const legacy: Record<string, unknown> = { ...validDraft() }
+    delete legacy['version']
     expect(
       loadCalibrationDraft(memoryStorage(JSON.stringify(legacy))),
     ).toBeNull()

@@ -82,22 +82,27 @@ describe('parseCalibrationProfile', () => {
   })
 
   it('rejects out-of-range compensation parameters', () => {
-    const broken = validProfile()
-    broken.compensation = { ...broken.compensation, chromaGain: 7 }
+    const profile = validProfile()
+    const broken = {
+      ...profile,
+      compensation: { ...profile.compensation, chromaGain: 7 },
+    }
     expect(() => parseCalibrationProfile(broken)).toThrow()
   })
 
   it('rejects a LUT whose data does not match its size', () => {
-    const broken = validProfile()
-    broken.lut = { size: 17, data: [0, 0, 0] }
+    const broken = { ...validProfile(), lut: { size: 17, data: [0, 0, 0] } }
     expect(() => parseCalibrationProfile(broken)).toThrow()
   })
 
   it('rejects trials with malformed stimuli', () => {
-    const broken = validProfile()
-    broken.rawTrials = [
-      { ...broken.rawTrials[0]!, stimulus: { id: 'x' } as never },
-    ]
+    const profile = validProfile()
+    const broken = {
+      ...profile,
+      rawTrials: [
+        { ...profile.rawTrials[0]!, stimulus: { id: 'x' } as never },
+      ],
+    }
     expect(() => parseCalibrationProfile(broken)).toThrow()
   })
 

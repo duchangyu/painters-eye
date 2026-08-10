@@ -9,7 +9,7 @@ import {
 
 type Vector3 = [number, number, number]
 
-function cross(a: Vector3, b: Vector3): Vector3 {
+function cross(a: readonly number[], b: readonly number[]): Vector3 {
   return [
     a[1] * b[2] - a[2] * b[1],
     a[2] * b[0] - a[0] * b[2],
@@ -17,7 +17,7 @@ function cross(a: Vector3, b: Vector3): Vector3 {
   ]
 }
 
-function normalize(v: Vector3): Vector3 {
+function normalize(v: readonly number[]): Vector3 {
   const length = Math.hypot(v[0], v[1], v[2])
   return [v[0] / length, v[1] / length, v[2] / length]
 }
