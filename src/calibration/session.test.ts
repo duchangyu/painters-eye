@@ -29,12 +29,21 @@ describe('calibration session scheduling', () => {
       'luminance-control',
     ])
 
-    const directionCounts = ['up', 'right', 'down', 'left'].map(
-      (direction) =>
-        originals.filter((trial) => trial.stimulus.direction === direction)
-          .length,
-    )
-    expect(directionCounts).toEqual([4, 4, 4, 4])
+    // Directions come from the seeded random stream: they must not be a
+    // function of the axis index (the old seed%4 bug made protan always
+    // 'up', deutan always 'right', ...), and each axis must show more than
+    // one direction across the schedule.
+    const directions = new Set(originals.map((trial) => trial.stimulus.direction))
+    expect(directions.size).toBeGreaterThan(1)
+    const axes = ['protan', 'deutan', 'blue-yellow-control', 'luminance-control']
+    for (const axis of axes) {
+      const perAxis = originals.filter((trial) => trial.stimulus.axis === axis)
+      const perAxisDirections = new Set(
+        perAxis.map((trial) => trial.stimulus.direction),
+      )
+      expect(perAxisDirections.size).toBeGreaterThan(1)
+      expect(perAxis).toHaveLength(4)
+    }
     expect(first.filter((trial) => trial.repeatedFromTrialId)).toHaveLength(4)
     expect(toPublicTrial(first.at(-1)!)).not.toHaveProperty('repeatedFromTrialId')
   })
