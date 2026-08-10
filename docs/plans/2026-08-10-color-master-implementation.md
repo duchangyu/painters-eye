@@ -596,7 +596,7 @@ git commit -m "feat: validate and explain compensation results"
 - Create: `src/data/artworks.test.ts`
 - Create: `public/artworks/manifest.json`
 - Create: `public/artworks/night-cafe.jpg`
-- Create: `public/artworks/grapes-lemons-pears-apples.jpg`
+- Create: `public/artworks/roses.jpg`
 - Create: `public/artworks/apples-pears.jpg`
 - Create: `public/artworks/oleanders.jpg`
 - Create: `public/artworks/women-picking-olives.jpg`
@@ -616,7 +616,7 @@ Expected: FAIL because gallery data is absent.
 
 **Step 3: Implement the acquisition script**
 
-Fetch metadata only from the approved object pages and museum APIs listed in the design. For The Met, require `isPublicDomain === true`; for the Art Institute of Chicago, require `is_public_domain === true`; for The Night Café, retain both the Yale object page and the public-domain Wikimedia image record. Resize to a 2000-pixel long edge with `sharp`, preserve ICC information when available, remove unrelated metadata, and write SHA-256 hashes into `manifest.json`.
+Fetch metadata only from the approved object pages and museum APIs listed in the design. For The Met, require `isPublicDomain === true`; for The Night Café, retain both the Yale object page and the public-domain Wikimedia image record. (The original AIC selection was replaced with The Met's public-domain *Roses* because the AIC image CDN requires an interactive Cloudflare challenge in the implementation environment.) Resize to a 2000-pixel long edge with `sharp`, preserve ICC information when available, remove unrelated metadata, and write SHA-256 hashes into `manifest.json`.
 
 The script must abort on missing rights data, changed object IDs, non-image responses, or hash mismatch. Never substitute a search-result image.
 

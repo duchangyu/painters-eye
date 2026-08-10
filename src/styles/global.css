@@ -521,6 +521,171 @@ fieldset.form-section {
   line-height: 1.7;
 }
 
+.gallery-page {
+  width: min(100% - 2rem, 86rem);
+  margin: 0 auto;
+  padding: clamp(2rem, 6vw, 5rem) 0;
+}
+
+.gallery-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(18rem, 0.5fr);
+  gap: 2rem 5rem;
+  align-items: end;
+  padding-bottom: clamp(3rem, 7vw, 6rem);
+  border-bottom: 1px solid var(--line);
+}
+
+.gallery-header h1 {
+  max-width: 12ch;
+  margin: 0;
+  font-size: clamp(3.5rem, 9vw, 8rem);
+  letter-spacing: -0.07em;
+  line-height: 0.84;
+}
+
+.gallery-intro {
+  color: var(--muted);
+  line-height: 1.75;
+}
+
+.text-button {
+  padding: 0 0 0.25rem;
+  border: 0;
+  border-bottom: 1px solid currentcolor;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(4rem, 9vw, 8rem) clamp(1rem, 4vw, 3.5rem);
+  padding: clamp(3rem, 8vw, 7rem) 0;
+}
+
+.artwork-card:nth-child(even) {
+  margin-top: clamp(3rem, 10vw, 9rem);
+}
+
+.artwork-image-button {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  background: var(--paper-deep);
+  cursor: pointer;
+}
+
+.artwork-image-button img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: contain;
+  background: #d7d2c8;
+  transition: transform 400ms ease;
+}
+
+.artwork-image-button > span {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  padding: 0.8rem 1rem;
+  background: var(--instrument);
+  color: white;
+  font-size: 0.78rem;
+  font-weight: 700;
+  transform: translateY(100%);
+  transition: transform 180ms ease;
+}
+
+.artwork-image-button:hover img,
+.artwork-image-button:focus-visible img {
+  transform: scale(1.015);
+}
+
+.artwork-image-button:hover > span,
+.artwork-image-button:focus-visible > span {
+  transform: translateY(0);
+}
+
+.artwork-caption {
+  display: grid;
+  grid-template-columns: 2.5rem minmax(0, 1fr);
+  gap: 1rem;
+  padding-top: 1.5rem;
+}
+
+.collection-number,
+.artwork-credit,
+.original-title,
+.source-link {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.artwork-caption h2 {
+  margin-bottom: 0.25rem;
+  font-size: clamp(1.8rem, 3.5vw, 3rem);
+}
+
+.original-title,
+.artwork-credit {
+  margin-bottom: 0.35rem;
+}
+
+.curatorial-note {
+  margin: 1.4rem 0;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+}
+
+.curatorial-note strong {
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+}
+
+.curatorial-note p {
+  margin: 0.45rem 0 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.7;
+}
+
+.source-link {
+  text-underline-offset: 0.2rem;
+}
+
+.personal-image-entry {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 3rem;
+  padding: 2.5rem 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.personal-image-entry h2 {
+  margin-bottom: 0.5rem;
+  font-size: 2rem;
+}
+
+.personal-image-entry p:last-child {
+  margin: 0;
+  color: var(--muted);
+}
+
+.upload-label {
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
 @media (max-width: 720px) {
   .setup-intro {
     grid-template-columns: 1fr;
@@ -544,7 +709,9 @@ fieldset.form-section {
 
   .results-hero,
   .result-scoreboard,
-  .measurement-ledger {
+  .measurement-ledger,
+  .gallery-header,
+  .gallery-grid {
     grid-template-columns: 1fr;
   }
 
@@ -557,6 +724,15 @@ fieldset.form-section {
   .measurement-ledger div {
     border-right: 0;
     border-bottom: 1px solid var(--line);
+  }
+
+  .artwork-card:nth-child(even) {
+    margin-top: 0;
+  }
+
+  .personal-image-entry {
+    align-items: stretch;
+    flex-direction: column;
   }
 }
 
