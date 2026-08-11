@@ -9,3 +9,5 @@ test-results/
 blob-report/
 .vercel
 .omc/
+.env
+docs/reviews/
