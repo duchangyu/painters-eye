@@ -481,6 +481,82 @@ fieldset.form-section {
   padding: clamp(3rem, 8vw, 7rem) 0;
 }
 
+.simple-verdict {
+  padding: 3rem 0 1rem;
+}
+
+.simple-comparison {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1.5rem 2.5rem;
+}
+
+.simple-comparison > div:not(.simple-arrow) {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.simple-comparison span {
+  color: var(--muted);
+}
+
+.simple-comparison strong {
+  font-family: "Iowan Old Style", serif;
+  font-size: clamp(3rem, 7vw, 5.5rem);
+  font-weight: 500;
+}
+
+.simple-arrow {
+  font-size: clamp(2rem, 4vw, 3rem);
+  color: var(--muted);
+}
+
+.simple-highlight {
+  padding: 1.5rem 2rem;
+  background: var(--instrument);
+  color: white;
+}
+
+.simple-highlight span {
+  color: #c8d4da;
+}
+
+.simple-caption {
+  margin-top: 1.2rem;
+  color: var(--muted);
+}
+
+.simple-reason {
+  max-width: 42rem;
+  font-size: 1.25rem;
+  line-height: 1.8;
+}
+
+.simple-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  margin: 2rem 0 3rem;
+}
+
+.details-toggle {
+  margin-left: auto;
+}
+
+.results-details {
+  border-top: 1px solid var(--line);
+  padding-top: 2rem;
+}
+
+.details-intro {
+  max-width: 48rem;
+  margin-bottom: 2rem;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
 .results-hero {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(16rem, 0.45fr);
@@ -1166,6 +1242,19 @@ fieldset.form-section {
   .results-hero > p:last-child {
     grid-column: 1;
     grid-row: auto;
+  }
+
+  .details-toggle {
+    margin-left: 0;
+  }
+
+  .simple-comparison {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .simple-arrow {
+    transform: rotate(90deg);
   }
 
   .result-scoreboard article,

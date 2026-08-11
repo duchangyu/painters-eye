@@ -11,7 +11,7 @@ test("first run reaches the gallery through calibration and blind validation", a
   await page.goto("/");
   await completeDisplaySetup(page);
   await completeCalibrationAndValidation(page);
-  await page.getByRole("button", { name: "保存配置并继续" }).click();
+  await page.getByRole("button", { name: "保存配置，开始欣赏名画" }).click();
   await expect(
     page.getByRole("heading", { name: "画家眼中，是什么颜色？" }),
   ).toBeVisible();
@@ -43,7 +43,7 @@ test("keyboard-only users can set up, calibrate, and compare", async ({
 
   await completeCalibrationAndValidation(page);
   await page.keyboard.press("Tab");
-  const saveButton = page.getByRole("button", { name: "保存配置并继续" });
+  const saveButton = page.getByRole("button", { name: "保存配置，开始欣赏名画" });
   await expect(saveButton).toBeFocused();
   await page.keyboard.press("Enter");
   await expect(

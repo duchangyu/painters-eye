@@ -51,7 +51,7 @@ const profile: FittedBehavioralProfile = {
 };
 
 describe("ResultsScreen", () => {
-  it("shows transparent behavioral evidence and continues explicitly", async () => {
+  it("shows the simple verdict first and reveals details on demand", async () => {
     const user = userEvent.setup();
     const onContinue = vi.fn();
     render(
@@ -62,14 +62,36 @@ describe("ResultsScreen", () => {
       />,
     );
 
+    // Simple view: the two key numbers and the primary action are visible.
     expect(screen.getByText("42%")).toBeVisible();
     expect(screen.getByText("81%")).toBeVisible();
+    expect(screen.queryByText("结果可靠度")).not.toBeInTheDocument();
+
+    // Detailed view unfolds on request.
+    await user.click(screen.getByRole("button", { name: "查看详细数据" }));
     expect(screen.getByText("结果可靠度")).toBeVisible();
     expect(screen.getByText("86%")).toBeVisible();
-    expect(
-      screen.getByText(/结果只代表你在这台显示器上的表现，不是医学诊断。/),
-    ).toBeVisible();
-    await user.click(screen.getByRole("button", { name: "保存配置并继续" }));
+
+    await user.click(
+      screen.getByRole("button", { name: "保存配置，开始欣赏名画" }),
+    );
     expect(onContinue).toHaveBeenCalledOnce();
+  });
+
+  it("prioritizes recalibration when validation fails", async () => {
+    const user = userEvent.setup();
+    const onRecalibrate = vi.fn();
+    render(
+      <ResultsScreen
+        metrics={{ ...metrics, passed: false }}
+        profile={profile}
+        onContinue={vi.fn()}
+        onRecalibrate={onRecalibrate}
+      />,
+    );
+
+    expect(screen.getByText("建议重新测一次")).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "重新测试" }));
+    expect(onRecalibrate).toHaveBeenCalledOnce();
   });
 });

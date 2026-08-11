@@ -13,7 +13,7 @@ test("strength zero is pixel-identical and hold-to-original keeps zoom", async (
   const original = await stage.screenshot({ animations: "disabled" });
 
   await page.getByRole("button", { name: "看到画家眼中的颜色" }).click();
-  const strength = page.getByLabel("增强强度");
+  const strength = page.getByLabel("转换强度");
   await strength.focus();
   await page.keyboard.press("Home");
   await expect(strength).toHaveValue("0");

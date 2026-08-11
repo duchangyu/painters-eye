@@ -51,7 +51,7 @@ export async function completeCalibrationAndValidation(page: Page) {
     await answerTrial(page, condition === "personalized");
   }
   await expect(
-    page.getByRole("heading", { name: "可以看到正常视觉了" }),
+    page.getByRole("heading", { name: "测试通过" }),
   ).toBeVisible();
 }
 
@@ -59,7 +59,7 @@ export async function completeFirstRun(page: Page) {
   await page.goto("/");
   await completeDisplaySetup(page);
   await completeCalibrationAndValidation(page);
-  await page.getByRole("button", { name: "保存配置并继续" }).click();
+  await page.getByRole("button", { name: "保存配置，开始欣赏名画" }).click();
   await expect(
     page.getByRole("heading", { name: "画家眼中，是什么颜色？" }),
   ).toBeVisible();
