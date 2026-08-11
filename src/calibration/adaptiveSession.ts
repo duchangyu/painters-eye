@@ -48,14 +48,14 @@ export interface AdaptiveCalibrationSession {
 
 export function createAxisStaircase(
   axis: ConfusionAxis,
-  maxTrials = 12,
+  maxTrials = 10,
 ): StaircaseState {
   return createStaircase({
     axis,
     startDelta: START_DELTA[axis],
     stepSize: AXIS_STEP_SIZE[axis],
     maxTrials,
-    targetReversals: 8,
+    targetReversals: 6,
   })
 }
 
@@ -67,8 +67,8 @@ export interface CreateAdaptiveCalibrationSessionOptions {
 
 export function createAdaptiveCalibrationSession({
   seed,
-  trialsPerAxis = 12,
-  repeatCount = 8,
+  trialsPerAxis = 10,
+  repeatCount = 4,
 }: CreateAdaptiveCalibrationSessionOptions): AdaptiveCalibrationSession {
   let scheduled: readonly ScheduledCalibrationTrial[] =
     createCalibrationSchedule({ seed, trialsPerAxis, repeatCount })

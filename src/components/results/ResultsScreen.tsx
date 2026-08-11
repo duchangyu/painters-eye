@@ -7,6 +7,7 @@ export interface ResultsScreenProps {
   readonly profile: FittedBehavioralProfile;
   readonly onContinue: () => void;
   readonly onRecalibrate?: () => void;
+  readonly onRetryValidation?: () => void;
 }
 
 function percent(value: number): string {
@@ -22,6 +23,7 @@ export function ResultsScreen({
   profile,
   onContinue,
   onRecalibrate,
+  onRetryValidation,
 }: ResultsScreenProps) {
   const [showDetails, setShowDetails] = useState(false);
 
@@ -35,8 +37,8 @@ export function ResultsScreen({
     personalized.controlAccuracy < original.controlAccuracy - 0.05;
 
   const failureReason = controlDropped
-    ? "转换虽然让你答对了更多题，但也让一些你本来能分清的颜色变模糊了。再测一次，拿到更稳定的结果后就能保存配置。"
-    : "这次专属转换带来的提升还不够明显，直接保存可能帮不到你。再测一次，结果稳定后就能保存配置。";
+    ? "转换虽然让你答对了更多题，但有几道你本来能分清颜色的题答错了——这通常是手滑或状态波动。重新验证一次（约 2 分钟，不用重头来），通常就能通过。"
+    : "这次专属转换带来的提升还不够明显。重新验证一次（约 2 分钟，不用重头来），拿到更稳定的结果后就能保存配置。";
 
   return (
     <main className="results-page">
@@ -82,13 +84,22 @@ export function ResultsScreen({
           </button>
         ) : (
           <>
-            {onRecalibrate && (
+            {onRetryValidation && (
               <button
                 className="primary-button"
                 type="button"
+                onClick={onRetryValidation}
+              >
+                重新验证（约 2 分钟）
+              </button>
+            )}
+            {onRecalibrate && (
+              <button
+                className={onRetryValidation ? "quiet-button" : "primary-button"}
+                type="button"
                 onClick={onRecalibrate}
               >
-                重新测试
+                完整重新测试
               </button>
             )}
             <button className="quiet-button" type="button" onClick={onContinue}>

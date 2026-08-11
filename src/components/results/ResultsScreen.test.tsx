@@ -78,8 +78,9 @@ describe("ResultsScreen", () => {
     expect(onContinue).toHaveBeenCalledOnce();
   });
 
-  it("prioritizes recalibration when validation fails", async () => {
+  it("prioritizes a quick validation retry when validation fails", async () => {
     const user = userEvent.setup();
+    const onRetryValidation = vi.fn();
     const onRecalibrate = vi.fn();
     render(
       <ResultsScreen
@@ -87,11 +88,16 @@ describe("ResultsScreen", () => {
         profile={profile}
         onContinue={vi.fn()}
         onRecalibrate={onRecalibrate}
+        onRetryValidation={onRetryValidation}
       />,
     );
 
     expect(screen.getByText("建议重新测一次")).toBeVisible();
-    await user.click(screen.getByRole("button", { name: "重新测试" }));
+    await user.click(
+      screen.getByRole("button", { name: "重新验证（约 2 分钟）" }),
+    );
+    expect(onRetryValidation).toHaveBeenCalledOnce();
+    await user.click(screen.getByRole("button", { name: "完整重新测试" }));
     expect(onRecalibrate).toHaveBeenCalledOnce();
   });
 });

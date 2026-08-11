@@ -92,7 +92,24 @@ describe('validation session', () => {
 
     expect(deltaByAxis.get('protan')).toBeCloseTo(0.08 * 1.25, 5)
     expect(deltaByAxis.get('deutan')).toBeCloseTo(0.1 * 1.25, 5)
-    expect(deltaByAxis.get('luminance-control')).toBeCloseTo(0.02 * 1.25, 5)
+  })
+
+  it('renders control stimuli well above threshold so slips stay rare', () => {
+    const session = createValidationSession({
+      seed: 93,
+      trialsPerCondition: 4,
+      personalized,
+      thresholds,
+    })
+    const deltaByAxis = new Map(
+      session
+        .filter((trial) => trial.condition === 'original')
+        .map((trial) => [trial.stimulus.axis, trial.stimulus.delta]),
+    )
+
+    // 4x the fitted threshold, floored at a clearly visible delta.
+    expect(deltaByAxis.get('blue-yellow-control')).toBeCloseTo(0.04 * 4, 5)
+    expect(deltaByAxis.get('luminance-control')).toBeCloseTo(0.02 * 4, 5)
   })
 
   it('rejects sessions without a threshold for every axis', () => {

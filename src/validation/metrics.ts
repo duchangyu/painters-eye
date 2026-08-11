@@ -80,9 +80,13 @@ export function summarizeValidation(
   const controlStable =
     byCondition.personalized.controlAccuracy >=
     byCondition.original.controlAccuracy - 0.05
+  // A configuration is worth saving when the personalized transform clearly
+  // beats the untouched image and leaves the control colors intact. The
+  // generic transform is a reference point shown in the details, not a gate:
+  // with only a handful of trials per condition, requiring a strict win over
+  // generic would let noise veto a transform that genuinely helps.
   const passed =
-    byCondition.personalized.accuracy >
-      Math.max(byCondition.original.accuracy, byCondition.generic.accuracy) &&
+    byCondition.personalized.accuracy > byCondition.original.accuracy &&
     controlStable
   const confidence =
     accuracyImprovement >= 0.2

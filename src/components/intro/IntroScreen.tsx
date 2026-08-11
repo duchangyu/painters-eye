@@ -47,7 +47,7 @@ export function IntroScreen({ onStart }: IntroScreenProps) {
               </li>
               <li>
                 <strong>色彩分辨测试</strong>
-                <span>约 10–15 分钟：辨认开口方向，测出你在这块屏幕上的辨色阈值。</span>
+                <span>约 8–12 分钟：辨认开口方向，测出你在这块屏幕上的辨色阈值。</span>
               </li>
               <li>
                 <strong>浏览世界名画</strong>
@@ -84,7 +84,7 @@ export function IntroScreen({ onStart }: IntroScreenProps) {
         </div>
 
         <div className="setup-action">
-          <p>整个过程约 10–15 分钟。</p>
+          <p>整个过程约 8–12 分钟。</p>
           <button
             className="primary-button"
             type="button"

@@ -61,7 +61,7 @@ export function DisplaySetup({
         <p className="folio">
           {mode === "review"
             ? "显示环境复核 · 约 2 分钟"
-            : "开始之前 · 约 10–15 分钟"}
+            : "开始之前 · 约 8–12 分钟"}
         </p>
         <h1 id="product-title">Painter's Eye</h1>
         <p className="intro-lede">

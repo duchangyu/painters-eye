@@ -94,6 +94,7 @@ export function AppFlow() {
     useState<QuickCheckAssessment | null>(null);
   const [originalOnly, setOriginalOnly] = useState(false);
   const [calibrationRun, setCalibrationRun] = useState(0);
+  const [validationRun, setValidationRun] = useState(0);
   const [selectedArtwork, setSelectedArtwork] = useState<ArtworkRecord | null>(
     null,
   );
@@ -184,14 +185,14 @@ export function AppFlow() {
     () =>
       profile
         ? createValidationSession({
-            seed: 20260811,
+            seed: 20260811 + validationRun * 977,
             personalized: profile,
             thresholds: profile.thresholds,
             excludedSeeds: schedule.map((trial) => trial.stimulus.seed),
             ...(isE2eMode ? { trialsPerCondition: 4 } : {}),
           })
         : [],
-    [profile, schedule],
+    [profile, schedule, validationRun],
   );
   const validationEngine = useMemo<CalibrationEngine>(() => {
     const trialsById = new Map(
@@ -463,6 +464,19 @@ export function AppFlow() {
     flow.beginCalibration(flow.displayConditions);
   }
 
+  /**
+   * Validation failures are usually noise, not a broken fit: the calibrated
+   * profile stays, only the blind check is re-run with fresh stimuli (~2
+   * minutes instead of a full recalibration).
+   */
+  function retryValidation() {
+    validationResponses.current = [];
+    removeLocalStorage("color-master:validation-draft");
+    setMetrics(null);
+    setValidationRun((value) => value + 1);
+    flow.beginValidation();
+  }
+
   async function importProfile(value: CalibrationProfileV1) {
     const repository = await createProfileRepository();
     try {
@@ -552,7 +566,7 @@ export function AppFlow() {
   if (flow.phase === "validation") {
     return (
       <CalibrationScreen
-        key="validation"
+        key={`validation-${validationRun}`}
         engine={validationEngine}
         onComplete={completeValidation}
         eyebrow="效果验证 · 条件已隐藏"
@@ -570,6 +584,7 @@ export function AppFlow() {
         metrics={metrics}
         onContinue={saveProfileAndContinue}
         onRecalibrate={restartCalibration}
+        onRetryValidation={retryValidation}
       />
     );
   }

@@ -32,8 +32,8 @@ export interface CreateCalibrationScheduleOptions {
 
 export function createCalibrationSchedule({
   seed,
-  trialsPerAxis = 12,
-  repeatCount = 8,
+  trialsPerAxis = 10,
+  repeatCount = 4,
 }: CreateCalibrationScheduleOptions): readonly ScheduledCalibrationTrial[] {
   const originals: ScheduledCalibrationTrial[] = []
   const seedBase = (seed >>> 0) * 1000

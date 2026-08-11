@@ -138,11 +138,12 @@ export function fitProfile(
   const normalizedExcess = dominantThreshold / Math.max(controlThreshold, 0.005) - 1
   const severity = clampUnit(normalizedExcess / 3)
   const repeatScore = calculateRepeatConsistency(trials)
+  // Full saturation at the default 10 target-axis trials per side.
   const sampleScore = clampUnit(
     trials.filter(
       (trial) =>
         trial.stimulus.axis === 'protan' || trial.stimulus.axis === 'deutan',
-    ).length / 24,
+    ).length / 20,
   )
   const reversalScore = mean(
     thresholds.map((threshold) =>

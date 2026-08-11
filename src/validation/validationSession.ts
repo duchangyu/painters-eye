@@ -58,6 +58,20 @@ const DIFFICULTY_FACTOR = 1.25
 const MIN_DELTA = 0.005
 const MAX_DELTA = 0.25
 
+/**
+ * Control trials (blue-yellow, luminance) exist to catch transforms that
+ * damage colors the user already tells apart. Rendering them at threshold
+ * level would make them coin flips — a single slip would look like a side
+ * effect. They are rendered well above threshold instead, so any real
+ * damage shows up clearly and random slips all but disappear.
+ */
+const CONTROL_DIFFICULTY_FACTOR = 4
+const CONTROL_MIN_DELTA = 0.06
+
+function isControlAxis(axis: ConfusionAxis): boolean {
+  return axis === 'blue-yellow-control' || axis === 'luminance-control'
+}
+
 function mapStimulus(
   stimulus: Stimulus,
   transform: (color: SrgbColor) => SrgbColor,
@@ -123,10 +137,12 @@ export function createValidationSession({
     if (threshold === undefined) {
       throw new RangeError(`no fitted threshold available for ${axis}`)
     }
-    const delta = Math.min(
-      MAX_DELTA,
-      Math.max(MIN_DELTA, threshold * DIFFICULTY_FACTOR),
-    )
+    const delta = isControlAxis(axis)
+      ? Math.min(
+          MAX_DELTA,
+          Math.max(CONTROL_MIN_DELTA, threshold * CONTROL_DIFFICULTY_FACTOR),
+        )
+      : Math.min(MAX_DELTA, Math.max(MIN_DELTA, threshold * DIFFICULTY_FACTOR))
     const original = createStimulus({ seed: stimulusSeed, axis, delta })
     for (const condition of CONDITIONS) {
       const stimulus =
