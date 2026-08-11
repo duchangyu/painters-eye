@@ -101,7 +101,12 @@ export function AppFlow() {
   // Skip the intro for returning users who have already seen it and have no
   // saved display conditions to restore. If display conditions exist, the
   // restore effect below will route directly to setup/gallery/quick-check.
+  // Runs once per session: `flow` changes identity on every render, so an
+  // unguarded effect would keep forcing the phase back to "setup".
+  const introSkipHandled = useRef(false);
   useEffect(() => {
+    if (introSkipHandled.current) return;
+    introSkipHandled.current = true;
     if (isE2eMode) {
       flow.beginSetup();
       return;
@@ -112,7 +117,8 @@ export function AppFlow() {
     if (browserStorage.getItem("painters-eye:seen-intro") === "1") {
       flow.beginSetup();
     }
-  }, [flow]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const calibrationSeed =
     calibrationRun === 0 && calibrationDraft
