@@ -53,6 +53,10 @@ test("keyboard-only users can set up, calibrate, and compare", async ({
   await page.keyboard.press("Tab");
   await expect(page.getByRole("button", { name: "配置与备份" })).toBeFocused();
   await page.keyboard.press("Tab");
+  await expect(page.getByLabel("选择图片")).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(page.getByLabel("图片链接")).toBeFocused();
+  await page.keyboard.press("Tab");
   await expect(
     page.getByRole("button", { name: "查看夜间咖啡馆" }),
   ).toBeFocused();
@@ -60,6 +64,10 @@ test("keyboard-only users can set up, calibrate, and compare", async ({
 
   await page.keyboard.press("Tab");
   await expect(page.getByRole("button", { name: "返回画廊" })).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("button", { name: "全屏" })).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("button", { name: "下一张" })).toBeFocused();
   await page.keyboard.press("Tab");
   const stage = page.getByTestId("artwork-stage");
   await expect(stage).toBeFocused();

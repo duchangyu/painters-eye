@@ -815,30 +815,109 @@ fieldset.form-section {
   text-underline-offset: 0.2rem;
 }
 
-.personal-image-entry {
-  display: flex;
-  align-items: end;
-  justify-content: space-between;
-  gap: 3rem;
-  padding: 2.5rem 0;
+.personal-section {
+  margin-bottom: 2.5rem;
+  padding: 2rem 0 2.5rem;
   border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
 }
 
-.personal-image-entry h2 {
+.personal-section.drag-active {
+  outline: 2px dashed var(--accent);
+  outline-offset: 0.5rem;
+}
+
+.personal-header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 2rem 3rem;
+  flex-wrap: wrap;
+}
+
+.personal-header h2 {
   margin-bottom: 0.5rem;
   font-size: 2rem;
 }
 
-.personal-image-entry p:last-child {
+.personal-header p:last-child {
   margin: 0;
   color: var(--muted);
+}
+
+.personal-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  flex-wrap: wrap;
 }
 
 .upload-label {
   display: grid;
   place-items: center;
   cursor: pointer;
+  white-space: nowrap;
+}
+
+.upload-label.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.url-import {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.url-import input {
+  width: min(20rem, 60vw);
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+
+.url-import input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.personal-error {
+  margin: 1rem 0 0;
+  color: #a33;
+}
+
+.personal-drop-hint {
+  margin: 1rem 0 0;
+  color: var(--accent);
+}
+
+.personal-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
+  gap: 1.2rem;
+  margin-top: 1.8rem;
+}
+
+.personal-card img {
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+}
+
+.personal-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  padding-top: 0.5rem;
+}
+
+.personal-card-name {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.85rem;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
@@ -883,6 +962,60 @@ fieldset.form-section {
   gap: 0.6rem;
   color: #d9e2e7;
   font-size: 0.78rem;
+}
+
+.viewer-chrome {
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+  justify-self: end;
+}
+
+.viewer-page:fullscreen {
+  overflow: auto;
+}
+
+.stage-shell {
+  position: relative;
+  min-width: 0;
+}
+
+.stage-nav {
+  position: absolute;
+  top: 50%;
+  z-index: 2;
+  width: 3rem;
+  height: 3rem;
+  transform: translateY(-50%);
+  border: 1px solid rgb(255 255 255 / 25%);
+  border-radius: 50%;
+  background: rgb(10 21 28 / 75%);
+  color: white;
+  font-size: 1.8rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.stage-nav:hover {
+  background: rgb(10 21 28 / 95%);
+  border-color: var(--accent);
+}
+
+.stage-prev {
+  left: 1rem;
+}
+
+.stage-next {
+  right: 1rem;
+}
+
+.shortcut-hint {
+  margin: 0;
+  padding-top: 1rem;
+  border-top: 1px solid rgb(255 255 255 / 10%);
+  color: #7d8f99;
+  font-size: 0.75rem;
+  letter-spacing: 0.02em;
 }
 
 .status-dot {
@@ -1267,9 +1400,24 @@ fieldset.form-section {
     margin-top: 0;
   }
 
-  .personal-image-entry {
+  .personal-header {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .url-import {
+    width: 100%;
+  }
+
+  .url-import input {
+    flex: 1;
+    width: auto;
+  }
+
+  .stage-nav {
+    width: 2.4rem;
+    height: 2.4rem;
+    font-size: 1.4rem;
   }
 
   .viewer-header {

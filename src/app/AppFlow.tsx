@@ -22,13 +22,18 @@ import { IntroScreen } from "../components/intro/IntroScreen";
 import { ProfileSettings } from "../components/profile/ProfileSettings";
 import { ResultsScreen } from "../components/results/ResultsScreen";
 import { DisplaySetup } from "../components/setup/DisplaySetup";
-import { ArtworkViewer } from "../components/viewer/ArtworkViewer";
-import { ARTWORKS, findArtwork, type ArtworkRecord } from "../data/artworks";
+import { ArtworkViewer, type ViewerDisplayState } from "../components/viewer/ArtworkViewer";
+import { ARTWORKS, findArtwork, toUserArtworkRecord, type ArtworkRecord } from "../data/artworks";
 import {
   calculateRepeatConsistency,
   fitProfile,
   type FittedBehavioralProfile,
 } from "../profile/fitProfile";
+import type { StoredImage } from "../storage/db";
+import {
+  createImageRepository,
+  MAX_IMAGE_BYTES,
+} from "../storage/imageRepository";
 import {
   createDisplayFingerprint,
   createProfileRepository,
@@ -85,7 +90,8 @@ export function AppFlow() {
   const responses = useRef<TrialResponse[]>([]);
   const validationResponses = useRef<ValidationResponse[]>([]);
   const quickCheckResponses = useRef<QuickCheckResponse[]>([]);
-  const customImageUrl = useRef<string | null>(null);
+  const userImageUrls = useRef(new Map<string, string>());
+  const [userImages, setUserImages] = useState<readonly ArtworkRecord[]>([]);
   const [profile, setProfile] = useState<FittedBehavioralProfile | null>(null);
   const [activeProfile, setActiveProfile] =
     useState<CalibrationProfileV1 | null>(null);
@@ -98,6 +104,14 @@ export function AppFlow() {
   const [selectedArtwork, setSelectedArtwork] = useState<ArtworkRecord | null>(
     null,
   );
+  // Display mode carries across artworks so switching paintings never resets
+  // the user's enhancement/zoom setup.
+  const [viewerDisplay, setViewerDisplay] = useState<ViewerDisplayState>({
+    enhanced: false,
+    strength: 0,
+    split: false,
+    zoom: 1,
+  });
 
   // Skip the intro for returning users who have already seen it and have no
   // saved display conditions to restore. If display conditions exist, the
@@ -332,11 +346,44 @@ export function AppFlow() {
     resumeCalibration,
   ]);
 
+  // Loads the user's locally stored images once at startup and restores a
+  // remembered personal image if one was open when the page was closed.
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadUserImages() {
+      const repository = await createImageRepository();
+      let stored: readonly StoredImage[];
+      try {
+        stored = await repository.listImages();
+      } finally {
+        repository.close();
+      }
+      if (cancelled) return;
+      const records = stored.map(registerUserImage);
+      setUserImages(records);
+      const rememberedId = globalThis.window?.localStorage.getItem(
+        SELECTED_ARTWORK_KEY,
+      );
+      if (rememberedId?.startsWith("personal-")) {
+        const remembered = records.find((record) => record.id === rememberedId);
+        if (remembered) setSelectedArtwork(remembered);
+      }
+    }
+
+    void loadUserImages();
+    return () => {
+      cancelled = true;
+    };
+     
+  }, []);
+
   useEffect(
     () => () => {
-      if (customImageUrl.current) {
-        URL.revokeObjectURL(customImageUrl.current);
+      for (const url of userImageUrls.current.values()) {
+        URL.revokeObjectURL(url);
       }
+      userImageUrls.current.clear();
     },
     [],
   );
@@ -505,27 +552,92 @@ export function AppFlow() {
     flow.restoreProfile(value.displayConditions, requirement !== "not-due");
   }
 
-  function openPersonalImage(file: File) {
-    if (customImageUrl.current) {
-      URL.revokeObjectURL(customImageUrl.current);
+  function registerUserImage(stored: StoredImage): ArtworkRecord {
+    const url = URL.createObjectURL(stored.blob);
+    userImageUrls.current.set(stored.id, url);
+    return toUserArtworkRecord(stored.id, stored.name, url);
+  }
+
+  async function persistUserImage(name: string, blob: Blob) {
+    const stored: StoredImage = {
+      id: `personal-${crypto.randomUUID()}`,
+      name,
+      blob,
+      addedAt: new Date().toISOString(),
+    };
+    const repository = await createImageRepository();
+    try {
+      await repository.saveImage(stored);
+    } finally {
+      repository.close();
     }
-    const imagePath = URL.createObjectURL(file);
-    customImageUrl.current = imagePath;
-    removeLocalStorage(SELECTED_ARTWORK_KEY);
-    setSelectedArtwork({
-      id: `personal-${file.name}`,
-      titleZh: file.name,
-      titleOriginal: "个人图片",
-      artist: "仅在本机处理",
-      date: "当前会话",
-      period: "个人图片",
-      imagePath,
-      objectPageUrl: "about:blank",
-      imageSourceUrl: imagePath,
-      rights: "User provided",
-      rationale: "用于观察你熟悉的颜色关系。",
-      interpretation:
-        "这是一张个人图片。请先看原图，再开启增强，并留意细节分离是否改善、肤色或中性色是否失真。",
+    const record = registerUserImage(stored);
+    setUserImages((current) => [...current, record]);
+  }
+
+  /** Returns an error message, or null when every file was accepted. */
+  async function addUserFiles(files: readonly File[]): Promise<string | null> {
+    const rejected: string[] = [];
+    for (const file of files) {
+      if (!file.type.startsWith("image/")) {
+        rejected.push(`${file.name}（不是图片）`);
+        continue;
+      }
+      if (file.size > MAX_IMAGE_BYTES) {
+        rejected.push(`${file.name}（超过 20MB）`);
+        continue;
+      }
+      await persistUserImage(file.name, file);
+    }
+    return rejected.length > 0 ? `已跳过：${rejected.join("、")}` : null;
+  }
+
+  /** Fetches an image URL into the local library. Returns error text or null. */
+  async function addUserImageFromUrl(url: string): Promise<string | null> {
+    let parsed: URL;
+    try {
+      parsed = new URL(url);
+    } catch {
+      return "这个链接看起来不完整，请检查后重试。";
+    }
+    try {
+      const response = await fetch(parsed.href);
+      if (!response.ok) {
+        return `对方网站返回了错误（${response.status}），可以换个链接或下载后用文件上传。`;
+      }
+      const contentType = response.headers.get("content-type") ?? "";
+      if (!contentType.startsWith("image/")) {
+        return "这个链接指向的不是图片，可以下载后改用文件上传。";
+      }
+      const blob = await response.blob();
+      if (blob.size > MAX_IMAGE_BYTES) {
+        return "这张图片超过 20MB，建议先压缩再添加。";
+      }
+      const name =
+        parsed.pathname.split("/").filter(Boolean).pop() ?? "网络图片";
+      await persistUserImage(decodeURIComponent(name), blob);
+      return null;
+    } catch {
+      return "无法读取这张图片：对方网站可能不允许跨域访问。可以下载后用文件上传。";
+    }
+  }
+
+  function deleteUserImage(id: string) {
+    const url = userImageUrls.current.get(id);
+    if (url) {
+      URL.revokeObjectURL(url);
+      userImageUrls.current.delete(id);
+    }
+    setUserImages((current) => current.filter((image) => image.id !== id));
+    if (selectedArtwork?.id === id) {
+      closeArtwork();
+    }
+    void createImageRepository().then(async (repository) => {
+      try {
+        await repository.deleteImage(id);
+      } finally {
+        repository.close();
+      }
     });
   }
 
@@ -665,9 +777,19 @@ export function AppFlow() {
     );
   }
   if (flow.phase === "gallery") {
+    const galleryList: readonly ArtworkRecord[] = [...userImages, ...ARTWORKS];
     if (selectedArtwork) {
+      const index = galleryList.findIndex(
+        (artwork) => artwork.id === selectedArtwork.id,
+      );
+      const previous = index > 0 ? galleryList[index - 1] : null;
+      const next =
+        index >= 0 && index < galleryList.length - 1
+          ? galleryList[index + 1]
+          : null;
       return (
         <ArtworkViewer
+          key={selectedArtwork.id}
           artwork={selectedArtwork}
           lut={viewerLut}
           recommendedStrength={
@@ -677,15 +799,22 @@ export function AppFlow() {
                 profile?.recommendedStrength ??
                 0)
           }
+          initialDisplay={viewerDisplay}
+          onDisplayChange={setViewerDisplay}
           onBack={closeArtwork}
+          onPrevious={previous ? () => openArtwork(previous) : null}
+          onNext={next ? () => openArtwork(next) : null}
         />
       );
     }
     return (
       <GalleryScreen
         artworks={ARTWORKS}
+        userImages={userImages}
         onSelect={openArtwork}
-        onUpload={openPersonalImage}
+        onAddFiles={addUserFiles}
+        onAddUrl={addUserImageFromUrl}
+        onDeleteImage={deleteUserImage}
         onOpenProfile={activeProfile ? flow.openProfile : undefined}
       />
     );

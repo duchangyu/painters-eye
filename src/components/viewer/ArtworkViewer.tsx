@@ -7,34 +7,69 @@ import {
   type WebGlArtworkRenderer,
 } from "../../rendering/webglRenderer";
 
+/**
+ * The viewer's display mode. AppFlow keeps the latest copy and hands it back
+ * as `initialDisplay` on the next artwork, so switching paintings never
+ * resets how the user prefers to look at them.
+ */
+export interface ViewerDisplayState {
+  readonly enhanced: boolean;
+  readonly strength: number;
+  readonly split: boolean;
+  readonly zoom: number;
+}
+
 export interface ArtworkViewerProps {
   readonly artwork: ArtworkRecord;
   readonly lut: Lut3D;
   readonly recommendedStrength: number;
+  readonly initialDisplay: ViewerDisplayState;
+  readonly onDisplayChange: (display: ViewerDisplayState) => void;
   readonly onBack: () => void;
+  readonly onPrevious: (() => void) | null;
+  readonly onNext: (() => void) | null;
 }
 
 type RendererStatus = "waiting" | "webgl" | "cpu" | "error";
+
+function isInteractive(target: EventTarget | null): boolean {
+  return (
+    target instanceof HTMLElement &&
+    target.closest("button, input, select, textarea, a, [contenteditable]") !==
+      null
+  );
+}
 
 export function ArtworkViewer({
   artwork,
   lut,
   recommendedStrength,
+  initialDisplay,
+  onDisplayChange,
   onBack,
+  onPrevious,
+  onNext,
 }: ArtworkViewerProps) {
+  const pageRef = useRef<HTMLElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
   const webglCanvasRef = useRef<HTMLCanvasElement>(null);
   const cpuCanvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<WebGlArtworkRenderer | null>(null);
   const [imageReady, setImageReady] = useState(false);
-  const [enhanced, setEnhanced] = useState(false);
-  const [strength, setStrength] = useState(0);
+  const [enhanced, setEnhanced] = useState(initialDisplay.enhanced);
+  const [strength, setStrength] = useState(initialDisplay.strength);
   const [peeking, setPeeking] = useState(false);
-  const [split, setSplit] = useState(false);
-  const [zoom, setZoom] = useState(1);
+  const [split, setSplit] = useState(initialDisplay.split);
+  const [zoom, setZoom] = useState(initialDisplay.zoom);
   const [showInterpretation, setShowInterpretation] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [rendererStatus, setRendererStatus] =
     useState<RendererStatus>("waiting");
+
+  // Keep the parent informed so the next artwork opens with the same setup.
+  useEffect(() => {
+    onDisplayChange({ enhanced, strength, split, zoom });
+  }, [enhanced, strength, split, zoom, onDisplayChange]);
 
   useEffect(() => {
     return () => {
@@ -87,25 +122,72 @@ export function ArtworkViewer({
       setEnhanced(false);
       return;
     }
-    setStrength(
-      Math.round(Math.min(1, Math.max(0, recommendedStrength)) * 100),
+    // Reuse the strength the user last settled on; fall back to the
+    // recommendation the first time enhancement is switched on.
+    setStrength((current) =>
+      current > 0
+        ? current
+        : Math.round(Math.min(1, Math.max(0, recommendedStrength)) * 100),
     );
     setEnhanced(true);
   }
+
+  async function toggleFullscreen() {
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+      } else {
+        await pageRef.current?.requestFullscreen();
+      }
+    } catch {
+      // Fullscreen unsupported (e.g. embedded iframe); the button is a
+      // convenience, not a requirement.
+    }
+  }
+
+  useEffect(() => {
+    function onFullscreenChange() {
+      setIsFullscreen(document.fullscreenElement !== null);
+    }
+    document.addEventListener("fullscreenchange", onFullscreenChange);
+    return () =>
+      document.removeEventListener("fullscreenchange", onFullscreenChange);
+  }, []);
+
+  // Gallery-style navigation shortcuts. Space-to-peek has its own effect
+  // below; both share the isInteractive guard so typing never triggers them.
+  useEffect(() => {
+    function onKeyDown(event: globalThis.KeyboardEvent) {
+      if (event.repeat || isInteractive(event.target)) return;
+      if (event.code === "ArrowLeft" && onPrevious) {
+        event.preventDefault();
+        onPrevious();
+      } else if (event.code === "ArrowRight" && onNext) {
+        event.preventDefault();
+        onNext();
+      } else if (event.code === "KeyF") {
+        event.preventDefault();
+        void toggleFullscreen();
+      } else if (event.code === "Escape") {
+        // Real browsers usually consume Escape to leave fullscreen before
+        // the page sees it; when they don't (or in embedded contexts) we
+        // exit explicitly. Outside fullscreen, Escape returns to the gallery.
+        if (document.fullscreenElement) {
+          void document.exitFullscreen();
+        } else {
+          onBack();
+        }
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [onPrevious, onNext, onBack]);
 
   // Space-to-peek must work no matter where focus rests (most commonly the
   // "看到画家眼中的颜色" button the user just clicked), without stealing Space from
   // interactive controls.
   useEffect(() => {
     if (!enhanced) return;
-    function isInteractive(target: EventTarget | null): boolean {
-      return (
-        target instanceof HTMLElement &&
-        target.closest(
-          "button, input, select, textarea, a, [contenteditable]",
-        ) !== null
-      );
-    }
     function onKeyDown(event: globalThis.KeyboardEvent) {
       if (
         event.code !== "Space" ||
@@ -144,7 +226,7 @@ export function ArtworkViewer({
   } as CSSProperties;
 
   return (
-    <main className="viewer-page">
+    <main className="viewer-page" ref={pageRef}>
       <header className="viewer-header">
         <button
           className="text-button"
@@ -155,33 +237,66 @@ export function ArtworkViewer({
           ← 返回画廊
         </button>
         <div>
-          <p className="folio">观察台 · {artwork.date}</p>
+          <p className="folio">
+            观察台{artwork.date ? ` · ${artwork.date}` : ""}
+          </p>
           <h1>{artwork.titleZh}</h1>
           <p>{artwork.artist}</p>
         </div>
-        <div className="viewer-status" aria-live="polite">
-          <span
-            className={
-              enhanced && !peeking ? "status-dot active" : "status-dot"
-            }
-          />
-          {statusLabel}
+        <div className="viewer-chrome">
+          <button
+            className="text-button"
+            type="button"
+            aria-label={isFullscreen ? "退出全屏" : "全屏欣赏"}
+            onClick={() => void toggleFullscreen()}
+          >
+            {isFullscreen ? "退出全屏" : "全屏"}
+          </button>
+          <div className="viewer-status" aria-live="polite">
+            <span
+              className={
+                enhanced && !peeking ? "status-dot active" : "status-dot"
+              }
+            />
+            {statusLabel}
+          </div>
         </div>
       </header>
 
       <section className="viewer-workbench">
-        <div
-          className={`artwork-stage ${split ? "split" : ""}`}
-          data-testid="artwork-stage"
-          data-layout={split ? "split" : "single"}
-          style={stageStyle}
-          tabIndex={0}
-          onPointerDown={() => enhanced && setPeeking(true)}
-          onPointerUp={() => setPeeking(false)}
-          onPointerCancel={() => setPeeking(false)}
-          onPointerLeave={() => setPeeking(false)}
-          aria-label="画作比较区；开启正常视觉模拟后按住空格查看原图"
-        >
+        <div className="stage-shell">
+          {onPrevious && (
+            <button
+              className="stage-nav stage-prev"
+              type="button"
+              aria-label="上一张"
+              onClick={onPrevious}
+            >
+              ‹
+            </button>
+          )}
+          {onNext && (
+            <button
+              className="stage-nav stage-next"
+              type="button"
+              aria-label="下一张"
+              onClick={onNext}
+            >
+              ›
+            </button>
+          )}
+          <div
+            className={`artwork-stage ${split ? "split" : ""}`}
+            data-testid="artwork-stage"
+            data-layout={split ? "split" : "single"}
+            style={stageStyle}
+            tabIndex={0}
+            onPointerDown={() => enhanced && setPeeking(true)}
+            onPointerUp={() => setPeeking(false)}
+            onPointerCancel={() => setPeeking(false)}
+            onPointerLeave={() => setPeeking(false)}
+            aria-label="画作比较区；开启正常视觉模拟后按住空格查看原图"
+          >
           {split && (
             <figure className="viewer-panel original-panel">
               <img src={artwork.imagePath} alt={`${artwork.titleZh}原图`} />
@@ -223,6 +338,7 @@ export function ArtworkViewer({
             )}
             {split && <figcaption>{statusLabel}</figcaption>}
           </figure>
+          </div>
         </div>
 
         <aside className="viewer-controls" aria-label="查看器控制">
@@ -290,18 +406,24 @@ export function ArtworkViewer({
             </button>
           </div>
 
-          <div className="interpretation-control">
-            <span>04 · 作品线索</span>
-            <button
-              className="text-button"
-              type="button"
-              aria-expanded={showInterpretation}
-              onClick={() => setShowInterpretation((value) => !value)}
-            >
-              {showInterpretation ? "收起色彩解读" : "展开色彩解读"}
-            </button>
-            {showInterpretation && <p>{artwork.interpretation}</p>}
-          </div>
+          {artwork.interpretation !== "" && (
+            <div className="interpretation-control">
+              <span>04 · 作品线索</span>
+              <button
+                className="text-button"
+                type="button"
+                aria-expanded={showInterpretation}
+                onClick={() => setShowInterpretation((value) => !value)}
+              >
+                {showInterpretation ? "收起色彩解读" : "展开色彩解读"}
+              </button>
+              {showInterpretation && <p>{artwork.interpretation}</p>}
+            </div>
+          )}
+
+          <p className="shortcut-hint">
+            ← → 切换 · 空格看原图 · F 全屏 · Esc 返回
+          </p>
 
           <p className="renderer-note">
             {rendererStatus === "cpu"

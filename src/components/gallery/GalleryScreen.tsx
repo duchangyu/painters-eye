@@ -1,27 +1,25 @@
-import type { ChangeEvent } from "react";
 import type { ArtworkRecord } from "../../data/artworks";
+import { UserImageSection } from "./UserImageSection";
 
 export interface GalleryScreenProps {
   readonly artworks: readonly ArtworkRecord[];
+  readonly userImages: readonly ArtworkRecord[];
   readonly onSelect: (artwork: ArtworkRecord) => void;
-  readonly onUpload?: (file: File) => void;
+  readonly onAddFiles: (files: File[]) => Promise<string | null>;
+  readonly onAddUrl: (url: string) => Promise<string | null>;
+  readonly onDeleteImage: (id: string) => void;
   readonly onOpenProfile?: () => void;
 }
 
 export function GalleryScreen({
   artworks,
+  userImages,
   onSelect,
-  onUpload,
+  onAddFiles,
+  onAddUrl,
+  onDeleteImage,
   onOpenProfile,
 }: GalleryScreenProps) {
-  function uploadImage(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    if (file) {
-      onUpload?.(file);
-    }
-    event.target.value = "";
-  }
-
   return (
     <main className="gallery-page">
       <header className="gallery-header">
@@ -31,7 +29,7 @@ export function GalleryScreen({
         </div>
         <div className="gallery-intro">
           <p>
-            先看你熟悉的画面，再切换到正常视觉模式。你会看到，色觉正常的人在欣赏同一幅画时，可能注意到哪些你平时错过的细节。
+            先看你熟悉的画面，再切换到正常视觉模式。你会看到，色觉正常的人在欣赏同一幅画时，可能注意到哪些你平时错过的细节。也可以上传或粘贴链接，看你自己的图片。
           </p>
           {onOpenProfile && (
             <button
@@ -44,6 +42,14 @@ export function GalleryScreen({
           )}
         </div>
       </header>
+
+      <UserImageSection
+        userImages={userImages}
+        onSelect={onSelect}
+        onAddFiles={onAddFiles}
+        onAddUrl={onAddUrl}
+        onDeleteImage={onDeleteImage}
+      />
 
       <section className="gallery-grid" aria-label="内置公版画作">
         {artworks.map((artwork, index) => (
@@ -88,26 +94,6 @@ export function GalleryScreen({
           </article>
         ))}
       </section>
-
-      {onUpload && (
-        <aside className="personal-image-entry">
-          <div>
-            <p className="folio">可选 · 不影响校准</p>
-            <h2>也可以看你熟悉的图片</h2>
-            <p>图片只在当前浏览器中处理，不会上传到服务器。</p>
-          </div>
-          <label className="quiet-button upload-label">
-            使用自己的图片
-            <input
-              className="sr-only"
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              aria-label="使用自己的图片"
-              onChange={uploadImage}
-            />
-          </label>
-        </aside>
-      )}
     </main>
   );
 }
