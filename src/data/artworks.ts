@@ -224,3 +224,29 @@ export const ARTWORKS: readonly ArtworkRecord[] = [
 export function findArtwork(id: string) {
   return ARTWORKS.find((artwork) => artwork.id === id);
 }
+
+/**
+ * Builds the gallery/viewer record for a user-provided image. Curatorial
+ * fields stay empty — the UI hides them for user images. `imageUrl` is an
+ * object URL owned by the caller, never stored.
+ */
+export function toUserArtworkRecord(
+  id: string,
+  name: string,
+  imageUrl: string,
+): ArtworkRecord {
+  return {
+    id,
+    titleZh: name,
+    titleOriginal: "个人图片",
+    artist: "仅保存在此浏览器",
+    date: "",
+    period: "个人图片",
+    imagePath: imageUrl,
+    objectPageUrl: "",
+    imageSourceUrl: imageUrl,
+    rights: "User provided",
+    rationale: "",
+    interpretation: "",
+  };
+}
