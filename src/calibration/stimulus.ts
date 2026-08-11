@@ -10,7 +10,7 @@ import { createSeededRandom } from "../lib/random";
 import { isInsideLandoltC } from "./landoltMask";
 
 const DIRECTIONS: readonly TargetDirection[] = ["up", "right", "down", "left"];
-const DOT_COUNT = 800;
+const DOT_COUNT = 1200;
 const LUMINANCE_WEIGHTS = [0.2126, 0.7152, 0.0722] as const;
 
 const COLOR_CENTERS: readonly SrgbColor[] = [
