@@ -1,20 +1,20 @@
-import { useEffect, useRef, useState, type CSSProperties } from 'react'
-import type { Lut3D } from '../../color/lut'
-import type { ArtworkRecord } from '../../data/artworks'
-import { renderImageWithCpu } from '../../rendering/cpuRenderer'
+import { useEffect, useRef, useState, type CSSProperties } from "react";
+import type { Lut3D } from "../../color/lut";
+import type { ArtworkRecord } from "../../data/artworks";
+import { renderImageWithCpu } from "../../rendering/cpuRenderer";
 import {
   createWebglArtworkRenderer,
   type WebGlArtworkRenderer,
-} from '../../rendering/webglRenderer'
+} from "../../rendering/webglRenderer";
 
 export interface ArtworkViewerProps {
-  readonly artwork: ArtworkRecord
-  readonly lut: Lut3D
-  readonly recommendedStrength: number
-  readonly onBack: () => void
+  readonly artwork: ArtworkRecord;
+  readonly lut: Lut3D;
+  readonly recommendedStrength: number;
+  readonly onBack: () => void;
 }
 
-type RendererStatus = 'waiting' | 'webgl' | 'cpu' | 'error'
+type RendererStatus = "waiting" | "webgl" | "cpu" | "error";
 
 export function ArtworkViewer({
   artwork,
@@ -22,124 +22,126 @@ export function ArtworkViewer({
   recommendedStrength,
   onBack,
 }: ArtworkViewerProps) {
-  const imageRef = useRef<HTMLImageElement>(null)
-  const webglCanvasRef = useRef<HTMLCanvasElement>(null)
-  const cpuCanvasRef = useRef<HTMLCanvasElement>(null)
-  const rendererRef = useRef<WebGlArtworkRenderer | null>(null)
-  const [imageReady, setImageReady] = useState(false)
-  const [enhanced, setEnhanced] = useState(false)
-  const [strength, setStrength] = useState(0)
-  const [peeking, setPeeking] = useState(false)
-  const [split, setSplit] = useState(false)
-  const [zoom, setZoom] = useState(1)
-  const [showInterpretation, setShowInterpretation] = useState(false)
+  const imageRef = useRef<HTMLImageElement>(null);
+  const webglCanvasRef = useRef<HTMLCanvasElement>(null);
+  const cpuCanvasRef = useRef<HTMLCanvasElement>(null);
+  const rendererRef = useRef<WebGlArtworkRenderer | null>(null);
+  const [imageReady, setImageReady] = useState(false);
+  const [enhanced, setEnhanced] = useState(false);
+  const [strength, setStrength] = useState(0);
+  const [peeking, setPeeking] = useState(false);
+  const [split, setSplit] = useState(false);
+  const [zoom, setZoom] = useState(1);
+  const [showInterpretation, setShowInterpretation] = useState(false);
   const [rendererStatus, setRendererStatus] =
-    useState<RendererStatus>('waiting')
+    useState<RendererStatus>("waiting");
 
   useEffect(() => {
     return () => {
       // Read the ref at cleanup time: capturing it in the closure would
       // dispose the renderer that existed at setup (often null) and leak
       // the current WebGL context.
-      rendererRef.current?.dispose()
-      rendererRef.current = null
-    }
-  }, [artwork.id, lut])
+      rendererRef.current?.dispose();
+      rendererRef.current = null;
+    };
+  }, [artwork.id, lut]);
 
   useEffect(() => {
-    let cancelled = false
+    let cancelled = false;
     const report = (status: RendererStatus) => {
       queueMicrotask(() => {
         if (!cancelled) {
-          setRendererStatus(status)
+          setRendererStatus(status);
         }
-      })
-    }
-    const image = imageRef.current
-    const webglCanvas = webglCanvasRef.current
-    const cpuCanvas = cpuCanvasRef.current
+      });
+    };
+    const image = imageRef.current;
+    const webglCanvas = webglCanvasRef.current;
+    const cpuCanvas = cpuCanvasRef.current;
     if (!imageReady || !image || !webglCanvas || !cpuCanvas) {
       return () => {
-        cancelled = true
-      }
+        cancelled = true;
+      };
     }
     try {
       const renderer =
-        rendererRef.current ?? createWebglArtworkRenderer(webglCanvas, lut)
-      rendererRef.current = renderer
-      renderer.render(image, strength / 100)
-      report('webgl')
+        rendererRef.current ?? createWebglArtworkRenderer(webglCanvas, lut);
+      rendererRef.current = renderer;
+      renderer.render(image, strength / 100);
+      report("webgl");
     } catch {
       try {
-        renderImageWithCpu(cpuCanvas, image, lut, strength / 100)
-        report('cpu')
+        renderImageWithCpu(cpuCanvas, image, lut, strength / 100);
+        report("cpu");
       } catch {
-        report('error')
+        report("error");
       }
     }
     return () => {
-      cancelled = true
-    }
-  }, [imageReady, lut, strength])
+      cancelled = true;
+    };
+  }, [imageReady, lut, strength]);
 
   function toggleEnhancement() {
     if (enhanced) {
-      setEnhanced(false)
-      return
+      setEnhanced(false);
+      return;
     }
-    setStrength(Math.round(Math.min(1, Math.max(0, recommendedStrength)) * 100))
-    setEnhanced(true)
+    setStrength(
+      Math.round(Math.min(1, Math.max(0, recommendedStrength)) * 100),
+    );
+    setEnhanced(true);
   }
 
   // Space-to-peek must work no matter where focus rests (most commonly the
-  // "开启个人增强" button the user just clicked), without stealing Space from
+  // "看到画家眼中的颜色" button the user just clicked), without stealing Space from
   // interactive controls.
   useEffect(() => {
-    if (!enhanced) return
+    if (!enhanced) return;
     function isInteractive(target: EventTarget | null): boolean {
       return (
         target instanceof HTMLElement &&
         target.closest(
-          'button, input, select, textarea, a, [contenteditable]',
+          "button, input, select, textarea, a, [contenteditable]",
         ) !== null
-      )
+      );
     }
     function onKeyDown(event: globalThis.KeyboardEvent) {
       if (
-        event.code !== 'Space' ||
+        event.code !== "Space" ||
         event.repeat ||
         isInteractive(event.target)
       ) {
-        return
+        return;
       }
-      event.preventDefault()
-      setPeeking(true)
+      event.preventDefault();
+      setPeeking(true);
     }
     function onKeyUp(event: globalThis.KeyboardEvent) {
-      if (event.code !== 'Space' || isInteractive(event.target)) return
-      setPeeking(false)
+      if (event.code !== "Space" || isInteractive(event.target)) return;
+      setPeeking(false);
     }
-    window.addEventListener('keydown', onKeyDown)
-    window.addEventListener('keyup', onKeyUp)
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
     return () => {
-      window.removeEventListener('keydown', onKeyDown)
-      window.removeEventListener('keyup', onKeyUp)
-    }
-  }, [enhanced])
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+    };
+  }, [enhanced]);
 
-  const renderFailed = enhanced && rendererStatus === 'error'
-  const showOriginal = !enhanced || peeking || strength === 0 || renderFailed
+  const renderFailed = enhanced && rendererStatus === "error";
+  const showOriginal = !enhanced || peeking || strength === 0 || renderFailed;
   const statusLabel = renderFailed
-    ? '增强渲染失败，显示原图'
+    ? "转换渲染失败，显示原图"
     : peeking
-      ? '按住查看原图'
+      ? "按住查看原图"
       : enhanced
-        ? '个人增强'
-        : '原始数字图像'
+        ? "正常视觉模拟"
+        : "你看到的原图";
   const stageStyle = {
-    '--artwork-zoom': String(zoom),
-    '--artwork-width': `${zoom * 100}%`,
-  } as CSSProperties
+    "--artwork-zoom": String(zoom),
+    "--artwork-width": `${zoom * 100}%`,
+  } as CSSProperties;
 
   return (
     <main className="viewer-page">
@@ -160,7 +162,7 @@ export function ArtworkViewer({
         <div className="viewer-status" aria-live="polite">
           <span
             className={
-              enhanced && !peeking ? 'status-dot active' : 'status-dot'
+              enhanced && !peeking ? "status-dot active" : "status-dot"
             }
           />
           {statusLabel}
@@ -169,31 +171,28 @@ export function ArtworkViewer({
 
       <section className="viewer-workbench">
         <div
-          className={`artwork-stage ${split ? 'split' : ''}`}
+          className={`artwork-stage ${split ? "split" : ""}`}
           data-testid="artwork-stage"
-          data-layout={split ? 'split' : 'single'}
+          data-layout={split ? "split" : "single"}
           style={stageStyle}
           tabIndex={0}
           onPointerDown={() => enhanced && setPeeking(true)}
           onPointerUp={() => setPeeking(false)}
           onPointerCancel={() => setPeeking(false)}
           onPointerLeave={() => setPeeking(false)}
-          aria-label="画作比较区；开启增强后按住空格查看原图"
+          aria-label="画作比较区；开启正常视觉模拟后按住空格查看原图"
         >
           {split && (
             <figure className="viewer-panel original-panel">
-              <img
-                src={artwork.imagePath}
-                alt={`${artwork.titleZh}原始数字图像`}
-              />
-              <figcaption>原始数字图像</figcaption>
+              <img src={artwork.imagePath} alt={`${artwork.titleZh}原图`} />
+              <figcaption>你看到的原图</figcaption>
             </figure>
           )}
           <figure className="viewer-panel">
             <img
               ref={imageRef}
               className={
-                showOriginal ? 'viewer-source active' : 'viewer-source'
+                showOriginal ? "viewer-source active" : "viewer-source"
               }
               src={artwork.imagePath}
               alt={artwork.titleZh}
@@ -202,24 +201,24 @@ export function ArtworkViewer({
             <canvas
               ref={webglCanvasRef}
               className={
-                !showOriginal && rendererStatus === 'webgl'
-                  ? 'viewer-output active'
-                  : 'viewer-output'
+                !showOriginal && rendererStatus === "webgl"
+                  ? "viewer-output active"
+                  : "viewer-output"
               }
-              aria-label={`${artwork.titleZh}个人增强图像`}
+              aria-label={`${artwork.titleZh}正常视觉模拟图像`}
             />
             <canvas
               ref={cpuCanvasRef}
               className={
-                !showOriginal && rendererStatus === 'cpu'
-                  ? 'viewer-output active'
-                  : 'viewer-output'
+                !showOriginal && rendererStatus === "cpu"
+                  ? "viewer-output active"
+                  : "viewer-output"
               }
-              aria-label={`${artwork.titleZh}个人增强图像（兼容模式）`}
+              aria-label={`${artwork.titleZh}正常视觉模拟图像（兼容模式）`}
             />
             {renderFailed && (
               <div className="render-warning" role="status">
-                当前浏览器无法渲染增强图像，已保留原图。
+                当前浏览器无法渲染正常视觉模拟图像，已保留原图。
               </div>
             )}
             {split && <figcaption>{statusLabel}</figcaption>}
@@ -233,30 +232,30 @@ export function ArtworkViewer({
               className="primary-button"
               type="button"
               onClick={(event) => {
-                toggleEnhancement()
+                toggleEnhancement();
                 // Move focus off the button so the next Space press peeks at
                 // the original instead of re-activating this button.
-                event.currentTarget.blur()
+                event.currentTarget.blur();
               }}
             >
-              {enhanced ? '关闭个人增强' : '开启个人增强'}
+              {enhanced ? "返回原图" : "看到画家眼中的颜色"}
             </button>
-            <small>增强不会修改原始文件，随时可以按住画面或空格键对照。</small>
+            <small>不会修改原始文件，随时可以按住画面或空格键对照。</small>
           </div>
 
           <label className="strength-control">
-            <span>02 · 增强强度</span>
+            <span>02 · 转换强度</span>
             <strong>{strength}%</strong>
             <input
               type="range"
               min="0"
               max="100"
               value={strength}
-              aria-label="增强强度"
+              aria-label="转换强度"
               disabled={!enhanced}
               onChange={(event) => setStrength(Number(event.target.value))}
             />
-            <small>校准建议 {Math.round(recommendedStrength * 100)}%</small>
+            <small>测试建议 {Math.round(recommendedStrength * 100)}%</small>
           </label>
 
           <div className="view-control-group">
@@ -287,7 +286,7 @@ export function ArtworkViewer({
               type="button"
               onClick={() => setSplit((value) => !value)}
             >
-              {split ? '单幅查看' : '并排比较'}
+              {split ? "单幅查看" : "并排比较"}
             </button>
           </div>
 
@@ -299,18 +298,18 @@ export function ArtworkViewer({
               aria-expanded={showInterpretation}
               onClick={() => setShowInterpretation((value) => !value)}
             >
-              {showInterpretation ? '收起色彩解读' : '展开色彩解读'}
+              {showInterpretation ? "收起色彩解读" : "展开色彩解读"}
             </button>
             {showInterpretation && <p>{artwork.interpretation}</p>}
           </div>
 
           <p className="renderer-note">
-            {rendererStatus === 'cpu'
-              ? '正在使用 CPU 兼容渲染。'
-              : '图像仅在本机浏览器中处理。'}
+            {rendererStatus === "cpu"
+              ? "正在使用 CPU 兼容渲染。"
+              : "图像仅在本机浏览器中处理。"}
           </p>
         </aside>
       </section>
     </main>
-  )
+  );
 }

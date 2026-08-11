@@ -1,5 +1,5 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { createAdaptiveCalibrationSession } from '../calibration/adaptiveSession'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createAdaptiveCalibrationSession } from "../calibration/adaptiveSession";
 import {
   assessQuickCheck,
   createQuickCheckTrials,
@@ -7,40 +7,40 @@ import {
   toQuickCheckResponse,
   type QuickCheckAssessment,
   type QuickCheckResponse,
-} from '../calibration/quickCheck'
-import type { DisplayConditions, TrialResponse } from '../domain/calibration'
-import type { CalibrationProfileV1 } from '../domain/profile'
-import type { ProfileValidationSummary } from '../domain/profile'
-import { buildCompensationLut, generateLut } from '../color/lut'
+} from "../calibration/quickCheck";
+import type { DisplayConditions, TrialResponse } from "../domain/calibration";
+import type { CalibrationProfileV1 } from "../domain/profile";
+import type { ProfileValidationSummary } from "../domain/profile";
+import { buildCompensationLut, generateLut } from "../color/lut";
 import {
   CalibrationScreen,
   type CalibrationAnswer,
   type CalibrationEngine,
-} from '../components/calibration/CalibrationScreen'
-import { GalleryScreen } from '../components/gallery/GalleryScreen'
-import { ProfileSettings } from '../components/profile/ProfileSettings'
-import { ResultsScreen } from '../components/results/ResultsScreen'
-import { DisplaySetup } from '../components/setup/DisplaySetup'
-import { ArtworkViewer } from '../components/viewer/ArtworkViewer'
-import { ARTWORKS, findArtwork, type ArtworkRecord } from '../data/artworks'
+} from "../components/calibration/CalibrationScreen";
+import { GalleryScreen } from "../components/gallery/GalleryScreen";
+import { ProfileSettings } from "../components/profile/ProfileSettings";
+import { ResultsScreen } from "../components/results/ResultsScreen";
+import { DisplaySetup } from "../components/setup/DisplaySetup";
+import { ArtworkViewer } from "../components/viewer/ArtworkViewer";
+import { ARTWORKS, findArtwork, type ArtworkRecord } from "../data/artworks";
 import {
   calculateRepeatConsistency,
   fitProfile,
   type FittedBehavioralProfile,
-} from '../profile/fitProfile'
+} from "../profile/fitProfile";
 import {
   createDisplayFingerprint,
   createProfileRepository,
-} from '../storage/profileRepository'
+} from "../storage/profileRepository";
 import {
   summarizeValidation,
   type ValidationMetrics,
   type ValidationResponse,
-} from '../validation/metrics'
+} from "../validation/metrics";
 import {
   createValidationSession,
   toPublicValidationTrial,
-} from '../validation/validationSession'
+} from "../validation/validationSession";
 import {
   CALIBRATION_SCHEDULE_VERSION,
   clearCalibrationDraft,
@@ -49,11 +49,11 @@ import {
   saveCalibrationDraft,
   writeLocalStorage,
   type StoredCalibrationDraft,
-} from './calibrationDraft'
-import { useAppFlow } from './useAppFlow'
-import { isE2eMode } from '../config/runtime'
+} from "./calibrationDraft";
+import { useAppFlow } from "./useAppFlow";
+import { isE2eMode } from "../config/runtime";
 
-const SELECTED_ARTWORK_KEY = 'color-master:selected-artwork'
+const SELECTED_ARTWORK_KEY = "color-master:selected-artwork";
 
 function profileValidationSummary(
   metrics: ValidationMetrics,
@@ -74,38 +74,38 @@ function profileValidationSummary(
     personalizedControlAccuracy:
       metrics.byCondition.personalized.controlAccuracy,
     repeatConsistency: metrics.repeatConsistency,
-  }
+  };
 }
 
 export function AppFlow() {
-  const flow = useAppFlow()
+  const flow = useAppFlow();
   const [calibrationDraft, setCalibrationDraft] =
-    useState<StoredCalibrationDraft | null>(loadCalibrationDraft)
-  const responses = useRef<TrialResponse[]>([])
-  const validationResponses = useRef<ValidationResponse[]>([])
-  const quickCheckResponses = useRef<QuickCheckResponse[]>([])
-  const customImageUrl = useRef<string | null>(null)
-  const [profile, setProfile] = useState<FittedBehavioralProfile | null>(null)
+    useState<StoredCalibrationDraft | null>(loadCalibrationDraft);
+  const responses = useRef<TrialResponse[]>([]);
+  const validationResponses = useRef<ValidationResponse[]>([]);
+  const quickCheckResponses = useRef<QuickCheckResponse[]>([]);
+  const customImageUrl = useRef<string | null>(null);
+  const [profile, setProfile] = useState<FittedBehavioralProfile | null>(null);
   const [activeProfile, setActiveProfile] =
-    useState<CalibrationProfileV1 | null>(null)
-  const [metrics, setMetrics] = useState<ValidationMetrics | null>(null)
+    useState<CalibrationProfileV1 | null>(null);
+  const [metrics, setMetrics] = useState<ValidationMetrics | null>(null);
   const [quickCheckResult, setQuickCheckResult] =
-    useState<QuickCheckAssessment | null>(null)
-  const [originalOnly, setOriginalOnly] = useState(false)
-  const [calibrationRun, setCalibrationRun] = useState(0)
+    useState<QuickCheckAssessment | null>(null);
+  const [originalOnly, setOriginalOnly] = useState(false);
+  const [calibrationRun, setCalibrationRun] = useState(0);
   const [selectedArtwork, setSelectedArtwork] = useState<ArtworkRecord | null>(
     null,
-  )
+  );
   const calibrationSeed =
     calibrationRun === 0 && calibrationDraft
       ? calibrationDraft.seed
-      : 20260810 + calibrationRun
+      : 20260810 + calibrationRun;
   const calibration = useMemo(() => {
     const session = createAdaptiveCalibrationSession({
       seed: calibrationSeed,
       ...(isE2eMode ? { trialsPerAxis: 1, repeatCount: 0 } : {}),
-    })
-    let replayed: readonly TrialResponse[] | null = null
+    });
+    let replayed: readonly TrialResponse[] | null = null;
     if (calibrationRun === 0 && calibrationDraft) {
       const results = calibrationDraft.responses
         .slice(0, calibrationDraft.completedTrials)
@@ -115,36 +115,36 @@ export function AppFlow() {
             selectedDirection: response.selectedDirection,
             reactionTimeMs: response.reactionTimeMs,
           }),
-        )
+        );
       // A mismatch means the schedule drifted from the draft (should not
       // happen past the loader's id/version checks): drop the draft rather
       // than fit on mismatched evidence.
       replayed = results.some((response) => response === undefined)
         ? null
-        : (results as TrialResponse[])
+        : (results as TrialResponse[]);
     }
-    return { session, replayed }
-  }, [calibrationDraft, calibrationRun, calibrationSeed])
-  const calibrationSession = calibration.session
+    return { session, replayed };
+  }, [calibrationDraft, calibrationRun, calibrationSeed]);
+  const calibrationSession = calibration.session;
   // Sync restored responses into the ref after render (refs must not be
   // written during render). Runs before paint, so no answer can precede it.
   useLayoutEffect(() => {
     if (calibration.replayed) {
-      responses.current = [...calibration.replayed]
+      responses.current = [...calibration.replayed];
     } else if (calibrationRun === 0 && calibrationDraft) {
-      clearCalibrationDraft()
-      responses.current = []
+      clearCalibrationDraft();
+      responses.current = [];
     }
-  }, [calibration, calibrationDraft, calibrationRun])
-  const schedule = calibrationSession.scheduledTrials
+  }, [calibration, calibrationDraft, calibrationRun]);
+  const schedule = calibrationSession.scheduledTrials;
   const engine = useMemo<CalibrationEngine>(() => {
     return {
       get trials() {
-        return calibrationSession.trials
+        return calibrationSession.trials;
       },
       recordAnswer(answer: CalibrationAnswer) {
-        const response = calibrationSession.recordAnswer(answer)
-        if (response) responses.current.push(response)
+        const response = calibrationSession.recordAnswer(answer);
+        if (response) responses.current.push(response);
       },
       saveDraft(completedTrials: number) {
         saveCalibrationDraft({
@@ -152,10 +152,10 @@ export function AppFlow() {
           seed: calibrationSeed,
           completedTrials,
           responses: responses.current,
-        })
+        });
       },
-    }
-  }, [calibrationSeed, calibrationSession])
+    };
+  }, [calibrationSeed, calibrationSession]);
   const validationTrials = useMemo(
     () =>
       profile
@@ -168,71 +168,71 @@ export function AppFlow() {
           })
         : [],
     [profile, schedule],
-  )
+  );
   const validationEngine = useMemo<CalibrationEngine>(() => {
     const trialsById = new Map(
       validationTrials.map((trial) => [trial.id, trial]),
-    )
+    );
     return {
       trials: validationTrials.map(toPublicValidationTrial),
       recordAnswer(answer: CalibrationAnswer) {
-        const trial = trialsById.get(answer.trialId)
+        const trial = trialsById.get(answer.trialId);
         if (!trial) {
-          return
+          return;
         }
         validationResponses.current.push({
           condition: trial.condition,
           axis: trial.stimulus.axis,
           correct: answer.selectedDirection === trial.stimulus.direction,
           reactionTimeMs: answer.reactionTimeMs,
-        })
+        });
       },
       saveDraft(completedTrials: number) {
         writeLocalStorage(
-          'color-master:validation-draft',
+          "color-master:validation-draft",
           JSON.stringify({
             completedTrials,
             responses: validationResponses.current,
           }),
-        )
+        );
       },
-    }
-  }, [validationTrials])
+    };
+  }, [validationTrials]);
   const validationTestConditions = useMemo(
     () => new Map(validationTrials.map((trial) => [trial.id, trial.condition])),
     [validationTrials],
-  )
+  );
   const quickCheckTrials = useMemo(
     () =>
       activeProfile ? createQuickCheckTrials(activeProfile, 20260812) : [],
     [activeProfile],
-  )
+  );
   const quickCheckEngine = useMemo<CalibrationEngine>(() => {
     const trialsById = new Map(
       quickCheckTrials.map((trial) => [trial.id, trial]),
-    )
+    );
     return {
       trials: quickCheckTrials,
       recordAnswer(answer: CalibrationAnswer) {
-        const trial = trialsById.get(answer.trialId)
-        if (!trial) return
+        const trial = trialsById.get(answer.trialId);
+        if (!trial) return;
         quickCheckResponses.current.push(
           toQuickCheckResponse(trial, {
             selectedDirection: answer.selectedDirection,
           }),
-        )
+        );
       },
       saveDraft(completedTrials: number) {
         writeLocalStorage(
-          'color-master:quick-check-draft',
+          "color-master:quick-check-draft",
           JSON.stringify({
             completedTrials,
             responses: quickCheckResponses.current,
           }),
-        )
+        );
       },
-    }
-  }, [quickCheckTrials])
+    };
+  }, [quickCheckTrials]);
   const viewerLut = useMemo(
     () =>
       originalOnly
@@ -243,40 +243,40 @@ export function AppFlow() {
             ? buildCompensationLut(profile)
             : generateLut(2, (color) => color),
     [activeProfile, originalOnly, profile],
-  )
+  );
 
-  const restoreProfile = flow.restoreProfile
-  const resumeCalibration = flow.resumeCalibration
+  const restoreProfile = flow.restoreProfile;
+  const resumeCalibration = flow.resumeCalibration;
   useEffect(() => {
-    let cancelled = false
+    let cancelled = false;
 
     async function restore() {
-      const browserStorage = globalThis.window?.localStorage
-      if (!browserStorage) return
+      const browserStorage = globalThis.window?.localStorage;
+      if (!browserStorage) return;
       const serialized = browserStorage.getItem(
-        'color-master:display-conditions',
-      )
-      if (!serialized) return
-      let conditions: DisplayConditions
+        "color-master:display-conditions",
+      );
+      if (!serialized) return;
+      let conditions: DisplayConditions;
       try {
-        conditions = JSON.parse(serialized) as DisplayConditions
+        conditions = JSON.parse(serialized) as DisplayConditions;
       } catch {
-        return
+        return;
       }
-      const fingerprint = createDisplayFingerprint(conditions)
-      const repository = await createProfileRepository()
+      const fingerprint = createDisplayFingerprint(conditions);
+      const repository = await createProfileRepository();
       try {
-        const exact = await repository.loadActiveProfile(fingerprint)
-        const candidate = exact ?? (await repository.loadMostRecentProfile())
-        if (cancelled) return
+        const exact = await repository.loadActiveProfile(fingerprint);
+        const candidate = exact ?? (await repository.loadMostRecentProfile());
+        if (cancelled) return;
         if (!candidate) {
           if (
             calibrationDraft &&
             calibrationDraft.completedTrials < calibrationSession.trials.length
           ) {
-            resumeCalibration(conditions)
+            resumeCalibration(conditions);
           }
-          return
+          return;
         }
         const requirement = quickCheckRequirement({
           profile: candidate,
@@ -284,43 +284,43 @@ export function AppFlow() {
           lastCheckedAt: browserStorage.getItem(
             `color-master:quick-check:${candidate.id}`,
           ),
-        })
-        setActiveProfile(candidate)
+        });
+        setActiveProfile(candidate);
         const rememberedArtwork = findArtwork(
-          browserStorage.getItem(SELECTED_ARTWORK_KEY) ?? '',
-        )
-        if (rememberedArtwork) setSelectedArtwork(rememberedArtwork)
-        restoreProfile(conditions, requirement !== 'not-due')
+          browserStorage.getItem(SELECTED_ARTWORK_KEY) ?? "",
+        );
+        if (rememberedArtwork) setSelectedArtwork(rememberedArtwork);
+        restoreProfile(conditions, requirement !== "not-due");
       } finally {
-        repository.close()
+        repository.close();
       }
     }
 
-    void restore()
+    void restore();
     return () => {
-      cancelled = true
-    }
+      cancelled = true;
+    };
   }, [
     calibrationDraft,
     calibrationSession.trials.length,
     restoreProfile,
     resumeCalibration,
-  ])
+  ]);
 
   useEffect(
     () => () => {
       if (customImageUrl.current) {
-        URL.revokeObjectURL(customImageUrl.current)
+        URL.revokeObjectURL(customImageUrl.current);
       }
     },
     [],
-  )
+  );
 
   function completeCalibration() {
-    clearCalibrationDraft()
-    setCalibrationDraft(null)
-    setProfile(fitProfile(responses.current, calibrationSession.staircases()))
-    flow.beginValidation()
+    clearCalibrationDraft();
+    setCalibrationDraft(null);
+    setProfile(fitProfile(responses.current, calibrationSession.staircases()));
+    flow.beginValidation();
   }
 
   function completeValidation() {
@@ -329,77 +329,77 @@ export function AppFlow() {
         validationResponses.current,
         calculateRepeatConsistency(responses.current),
       ),
-    )
-    flow.showResults()
+    );
+    flow.showResults();
   }
 
   async function saveProfileAndContinue() {
     if (!profile || !metrics || !flow.displayConditions) {
-      return
+      return;
     }
 
     if (metrics.passed) {
-      const createdAt = new Date().toISOString()
+      const createdAt = new Date().toISOString();
       const value: CalibrationProfileV1 = {
         schemaVersion: 1,
         id: `profile-${createdAt}`,
-        algorithmVersion: '1.1.0-mvp-adaptive',
+        algorithmVersion: "1.1.0-mvp-adaptive",
         createdAt,
         displayFingerprint: createDisplayFingerprint(flow.displayConditions),
         displayConditions: flow.displayConditions,
-        sourceSessionId: 'local-calibration-session',
+        sourceSessionId: "local-calibration-session",
         rawTrials: responses.current,
         thresholds: profile.thresholds,
         compensation: profile,
         confidence: profile.confidence,
         validation: profileValidationSummary(metrics),
         lut: buildCompensationLut(profile),
-      }
-      const repository = await createProfileRepository()
+      };
+      const repository = await createProfileRepository();
       try {
-        await repository.promoteValidatedProfile(value)
-        setActiveProfile(value)
-        setOriginalOnly(false)
-        writeLocalStorage(`color-master:quick-check:${value.id}`, createdAt)
+        await repository.promoteValidatedProfile(value);
+        setActiveProfile(value);
+        setOriginalOnly(false);
+        writeLocalStorage(`color-master:quick-check:${value.id}`, createdAt);
       } finally {
-        repository.close()
+        repository.close();
       }
     } else {
-      setOriginalOnly(true)
+      setOriginalOnly(true);
     }
-    flow.openGallery()
+    flow.openGallery();
   }
 
   function handleDisplaySetup(conditions: DisplayConditions) {
     if (!activeProfile) {
-      clearCalibrationDraft()
-      setCalibrationDraft(null)
-      responses.current = []
-      validationResponses.current = []
-      flow.beginCalibration(conditions)
-      return
+      clearCalibrationDraft();
+      setCalibrationDraft(null);
+      responses.current = [];
+      validationResponses.current = [];
+      flow.beginCalibration(conditions);
+      return;
     }
-    quickCheckResponses.current = []
-    setQuickCheckResult(null)
-    flow.beginQuickCheck(conditions)
+    quickCheckResponses.current = [];
+    setQuickCheckResult(null);
+    flow.beginQuickCheck(conditions);
   }
 
   async function completeQuickCheck() {
-    if (!activeProfile || !flow.displayConditions) return
-    const result = assessQuickCheck(activeProfile, quickCheckResponses.current)
-    setQuickCheckResult(result)
-    if (result.status !== 'pass') {
+    if (!activeProfile || !flow.displayConditions) return;
+    const result = assessQuickCheck(activeProfile, quickCheckResponses.current);
+    setQuickCheckResult(result);
+    if (result.status !== "pass") {
       // Record the attempt even on failure: without a timestamp the next
       // launch forces the same check again forever.
       writeLocalStorage(
         `color-master:quick-check:${activeProfile.id}`,
         new Date().toISOString(),
-      )
-      flow.showQuickCheckResult()
-      return
+      );
+      flow.showQuickCheckResult();
+      return;
     }
 
-    const fingerprint = createDisplayFingerprint(flow.displayConditions)
+    const fingerprint = createDisplayFingerprint(flow.displayConditions);
     const verifiedProfile: CalibrationProfileV1 = {
       ...activeProfile,
       id:
@@ -408,52 +408,52 @@ export function AppFlow() {
           : `${activeProfile.id}-display-${Date.now()}`,
       displayFingerprint: fingerprint,
       displayConditions: flow.displayConditions,
-    }
-    const checkedAt = new Date().toISOString()
-    const repository = await createProfileRepository()
+    };
+    const checkedAt = new Date().toISOString();
+    const repository = await createProfileRepository();
     try {
-      await repository.promoteValidatedProfile(verifiedProfile)
-      setActiveProfile(verifiedProfile)
-      setOriginalOnly(false)
+      await repository.promoteValidatedProfile(verifiedProfile);
+      setActiveProfile(verifiedProfile);
+      setOriginalOnly(false);
       writeLocalStorage(
         `color-master:quick-check:${verifiedProfile.id}`,
         checkedAt,
-      )
+      );
     } finally {
-      repository.close()
+      repository.close();
     }
-    flow.openGallery()
+    flow.openGallery();
   }
 
   function restartCalibration() {
-    if (!flow.displayConditions) return
-    responses.current = []
-    validationResponses.current = []
-    quickCheckResponses.current = []
-    setProfile(null)
-    setMetrics(null)
-    setQuickCheckResult(null)
-    clearCalibrationDraft()
-    setCalibrationDraft(null)
-    setCalibrationRun((value) => value + 1)
-    flow.beginCalibration(flow.displayConditions)
+    if (!flow.displayConditions) return;
+    responses.current = [];
+    validationResponses.current = [];
+    quickCheckResponses.current = [];
+    setProfile(null);
+    setMetrics(null);
+    setQuickCheckResult(null);
+    clearCalibrationDraft();
+    setCalibrationDraft(null);
+    setCalibrationRun((value) => value + 1);
+    flow.beginCalibration(flow.displayConditions);
   }
 
   async function importProfile(value: CalibrationProfileV1) {
-    const repository = await createProfileRepository()
+    const repository = await createProfileRepository();
     try {
-      await repository.promoteValidatedProfile(value)
+      await repository.promoteValidatedProfile(value);
     } finally {
-      repository.close()
+      repository.close();
     }
-    setActiveProfile(value)
-    setOriginalOnly(false)
+    setActiveProfile(value);
+    setOriginalOnly(false);
     // An imported profile must not bypass the display check: compare its
     // fingerprint against the current display and route through a quick
     // check whenever they differ (or the check is otherwise due).
     const currentFingerprint = flow.displayConditions
       ? createDisplayFingerprint(flow.displayConditions)
-      : null
+      : null;
     const requirement = currentFingerprint
       ? quickCheckRequirement({
           profile: value,
@@ -463,53 +463,53 @@ export function AppFlow() {
               `color-master:quick-check:${value.id}`,
             ) ?? null,
         })
-      : 'display-changed'
-    flow.restoreProfile(value.displayConditions, requirement !== 'not-due')
+      : "display-changed";
+    flow.restoreProfile(value.displayConditions, requirement !== "not-due");
   }
 
   function openPersonalImage(file: File) {
     if (customImageUrl.current) {
-      URL.revokeObjectURL(customImageUrl.current)
+      URL.revokeObjectURL(customImageUrl.current);
     }
-    const imagePath = URL.createObjectURL(file)
-    customImageUrl.current = imagePath
-    removeLocalStorage(SELECTED_ARTWORK_KEY)
+    const imagePath = URL.createObjectURL(file);
+    customImageUrl.current = imagePath;
+    removeLocalStorage(SELECTED_ARTWORK_KEY);
     setSelectedArtwork({
       id: `personal-${file.name}`,
       titleZh: file.name,
-      titleOriginal: '个人图片',
-      artist: '仅在本机处理',
-      date: '当前会话',
+      titleOriginal: "个人图片",
+      artist: "仅在本机处理",
+      date: "当前会话",
       imagePath,
-      objectPageUrl: 'about:blank',
+      objectPageUrl: "about:blank",
       imageSourceUrl: imagePath,
-      rights: 'User provided',
-      rationale: '用于观察你熟悉的颜色关系。',
+      rights: "User provided",
+      rationale: "用于观察你熟悉的颜色关系。",
       interpretation:
-        '这是一张个人图片。请先看原图，再开启增强，并留意细节分离是否改善、肤色或中性色是否失真。',
-    })
+        "这是一张个人图片。请先看原图，再开启增强，并留意细节分离是否改善、肤色或中性色是否失真。",
+    });
   }
 
   function openArtwork(artwork: ArtworkRecord) {
-    writeLocalStorage(SELECTED_ARTWORK_KEY, artwork.id)
-    setSelectedArtwork(artwork)
+    writeLocalStorage(SELECTED_ARTWORK_KEY, artwork.id);
+    setSelectedArtwork(artwork);
   }
 
   function closeArtwork() {
-    removeLocalStorage(SELECTED_ARTWORK_KEY)
-    setSelectedArtwork(null)
+    removeLocalStorage(SELECTED_ARTWORK_KEY);
+    setSelectedArtwork(null);
   }
 
-  if (flow.phase === 'setup') {
+  if (flow.phase === "setup") {
     return (
       <DisplaySetup
         onComplete={handleDisplaySetup}
         initialConditions={activeProfile?.displayConditions}
-        mode={activeProfile ? 'review' : 'calibrate'}
+        mode={activeProfile ? "review" : "calibrate"}
       />
-    )
+    );
   }
-  if (flow.phase === 'calibration') {
+  if (flow.phase === "calibration") {
     return (
       <CalibrationScreen
         key="calibration"
@@ -519,23 +519,23 @@ export function AppFlow() {
         }
         onComplete={completeCalibration}
       />
-    )
+    );
   }
-  if (flow.phase === 'validation') {
+  if (flow.phase === "validation") {
     return (
       <CalibrationScreen
         key="validation"
         engine={validationEngine}
         onComplete={completeValidation}
-        eyebrow="独立验证 · 条件已隐藏"
+        eyebrow="效果验证 · 条件已隐藏"
         title="再辨认一组新图形"
         progressName="验证进度"
         note="三种显示方式会随机出现；界面不会提示当前条件或正确答案。"
         testConditionByTrialId={validationTestConditions}
       />
-    )
+    );
   }
-  if (flow.phase === 'results' && profile && metrics) {
+  if (flow.phase === "results" && profile && metrics) {
     return (
       <ResultsScreen
         profile={profile}
@@ -543,23 +543,23 @@ export function AppFlow() {
         onContinue={saveProfileAndContinue}
         onRecalibrate={restartCalibration}
       />
-    )
+    );
   }
-  if (flow.phase === 'quick-check' && activeProfile) {
+  if (flow.phase === "quick-check" && activeProfile) {
     return (
       <CalibrationScreen
         key="quick-check"
         engine={quickCheckEngine}
         onComplete={() => void completeQuickCheck()}
-        eyebrow="配置短复核 · 8 题"
-        title="确认这套增强仍然合适"
+        eyebrow="效果短复核 · 8 题"
+        title="确认这套转换仍然合适"
         progressName="复核进度"
-        note="请保持与原校准相近的亮度。短复核不会自动删除旧配置。"
+        note="请保持与原测试相近的亮度。短复核不会自动删除旧配置。"
       />
-    )
+    );
   }
   if (
-    flow.phase === 'quick-check-result' &&
+    flow.phase === "quick-check-result" &&
     activeProfile &&
     quickCheckResult
   ) {
@@ -567,9 +567,9 @@ export function AppFlow() {
       <main className="calibration-page completion-pause quick-check-result">
         <p className="folio">短复核未通过</p>
         <h1>
-          {quickCheckResult.status === 'review-display-settings'
-            ? '先检查显示设置'
-            : '建议重新完整校准'}
+          {quickCheckResult.status === "review-display-settings"
+            ? "先检查显示设置"
+            : "建议重新完整测试"}
         </h1>
         <p>
           目标轴正确率 {Math.round(quickCheckResult.dominantAccuracy * 100)}%，
@@ -589,23 +589,23 @@ export function AppFlow() {
             type="button"
             onClick={restartCalibration}
           >
-            重新完整校准
+            重新完整测试
           </button>
           <button
             className="text-button"
             type="button"
             onClick={() => {
-              setOriginalOnly(true)
-              flow.openGallery()
+              setOriginalOnly(true);
+              flow.openGallery();
             }}
           >
             暂时只看原图
           </button>
         </div>
       </main>
-    )
+    );
   }
-  if (flow.phase === 'profile' && activeProfile) {
+  if (flow.phase === "profile" && activeProfile) {
     return (
       <ProfileSettings
         profile={activeProfile}
@@ -619,9 +619,9 @@ export function AppFlow() {
         onReviewDisplay={flow.reviewDisplay}
         onRecalibrate={restartCalibration}
       />
-    )
+    );
   }
-  if (flow.phase === 'gallery') {
+  if (flow.phase === "gallery") {
     if (selectedArtwork) {
       return (
         <ArtworkViewer
@@ -636,7 +636,7 @@ export function AppFlow() {
           }
           onBack={closeArtwork}
         />
-      )
+      );
     }
     return (
       <GalleryScreen
@@ -645,14 +645,14 @@ export function AppFlow() {
         onUpload={openPersonalImage}
         onOpenProfile={activeProfile ? flow.openProfile : undefined}
       />
-    )
+    );
   }
 
   return (
     <main className="calibration-page completion-pause">
-      <p className="folio">校准数据已记录</p>
-      <h1>下一步：独立盲测</h1>
-      <p>我们会使用从未出现过的刺激验证个人增强是否确实有效。</p>
+      <p className="folio">测试数据已记录</p>
+      <h1>下一步：效果验证</h1>
+      <p>我们会用一组新图形验证刚才的转换是否真的帮你分辨出了更多颜色。</p>
     </main>
-  )
+  );
 }

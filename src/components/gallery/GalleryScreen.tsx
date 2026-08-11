@@ -1,11 +1,11 @@
-import type { ChangeEvent } from 'react'
-import type { ArtworkRecord } from '../../data/artworks'
+import type { ChangeEvent } from "react";
+import type { ArtworkRecord } from "../../data/artworks";
 
 export interface GalleryScreenProps {
-  readonly artworks: readonly ArtworkRecord[]
-  readonly onSelect: (artwork: ArtworkRecord) => void
-  readonly onUpload?: (file: File) => void
-  readonly onOpenProfile?: () => void
+  readonly artworks: readonly ArtworkRecord[];
+  readonly onSelect: (artwork: ArtworkRecord) => void;
+  readonly onUpload?: (file: File) => void;
+  readonly onOpenProfile?: () => void;
 }
 
 export function GalleryScreen({
@@ -15,26 +15,30 @@ export function GalleryScreen({
   onOpenProfile,
 }: GalleryScreenProps) {
   function uploadImage(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0]
+    const file = event.target.files?.[0];
     if (file) {
-      onUpload?.(file)
+      onUpload?.(file);
     }
-    event.target.value = ''
+    event.target.value = "";
   }
 
   return (
     <main className="gallery-page">
       <header className="gallery-header">
         <div>
-          <p className="folio">私人色彩研究室 · 01</p>
-          <h1>从熟悉的作品开始看</h1>
+          <p className="folio">世界名画 · 正常视觉预览</p>
+          <h1>画家眼中，是什么颜色？</h1>
         </div>
         <div className="gallery-intro">
           <p>
-            先看原始数字图像，再主动开启个人增强。增强是替代编码，不是对他人主观视觉的复制。
+            先看你熟悉的画面，再切换到正常视觉模式。你会看到，色觉正常的人在欣赏同一幅画时，可能注意到哪些你平时错过的细节。
           </p>
           {onOpenProfile && (
-            <button className="text-button" type="button" onClick={onOpenProfile}>
+            <button
+              className="text-button"
+              type="button"
+              onClick={onOpenProfile}
+            >
               配置与备份
             </button>
           )}
@@ -53,13 +57,13 @@ export function GalleryScreen({
               <img
                 src={artwork.imagePath}
                 alt={`${artwork.titleZh}，${artwork.artist}`}
-                loading={index < 2 ? 'eager' : 'lazy'}
+                loading={index < 2 ? "eager" : "lazy"}
               />
               <span aria-hidden="true">进入查看器 ↗</span>
             </button>
             <div className="artwork-caption">
               <span className="collection-number">
-                {String(index + 1).padStart(2, '0')}
+                {String(index + 1).padStart(2, "0")}
               </span>
               <div>
                 <h2>{artwork.titleZh}</h2>
@@ -105,5 +109,5 @@ export function GalleryScreen({
         </aside>
       )}
     </main>
-  )
+  );
 }

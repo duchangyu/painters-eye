@@ -1,37 +1,37 @@
-import { useState, type FormEvent } from 'react'
-import type { DisplayConditions } from '../../domain/calibration'
+import { useState, type FormEvent } from "react";
+import type { DisplayConditions } from "../../domain/calibration";
 
 export interface DisplaySetupProps {
-  readonly onComplete: (conditions: DisplayConditions) => void
-  readonly initialConditions?: DisplayConditions
-  readonly mode?: 'calibrate' | 'review'
+  readonly onComplete: (conditions: DisplayConditions) => void;
+  readonly initialConditions?: DisplayConditions;
+  readonly mode?: "calibrate" | "review";
 }
 
 export function DisplaySetup({
   onComplete,
   initialConditions,
-  mode = 'calibrate',
+  mode = "calibrate",
 }: DisplaySetupProps) {
   const [displayNickname, setDisplayNickname] = useState(
-    initialConditions?.displayNickname ?? '',
-  )
+    initialConditions?.displayNickname ?? "",
+  );
   const [brightnessDescription, setBrightnessDescription] = useState(
-    initialConditions?.brightnessDescription ?? '',
-  )
-  const [nightShiftOff, setNightShiftOff] = useState(false)
-  const [trueToneOff, setTrueToneOff] = useState(false)
-  const [colorFiltersOff, setColorFiltersOff] = useState(false)
+    initialConditions?.brightnessDescription ?? "",
+  );
+  const [nightShiftOff, setNightShiftOff] = useState(false);
+  const [trueToneOff, setTrueToneOff] = useState(false);
+  const [colorFiltersOff, setColorFiltersOff] = useState(false);
   const ready =
-    displayNickname.trim() !== '' &&
-    brightnessDescription.trim() !== '' &&
+    displayNickname.trim() !== "" &&
+    brightnessDescription.trim() !== "" &&
     nightShiftOff &&
     trueToneOff &&
-    colorFiltersOff
+    colorFiltersOff;
 
   function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
+    event.preventDefault();
     if (!ready) {
-      return
+      return;
     }
 
     onComplete({
@@ -45,26 +45,32 @@ export function DisplaySetup({
       colorDepth: globalThis.screen?.colorDepth ?? 0,
       pixelRatio: globalThis.devicePixelRatio ?? 1,
       recordedAt: new Date().toISOString(),
-    })
+    });
   }
 
   return (
     <main className="setup-page">
       <header className="brand-lockup">
-        <span className="brand-mark" aria-hidden="true">CM</span>
-        <span>个人色彩实验室</span>
+        <span className="brand-mark" aria-hidden="true">
+          CM
+        </span>
+        <span>看见另一种颜色</span>
       </header>
 
       <section className="setup-intro" aria-labelledby="product-title">
         <p className="folio">
-          {mode === 'review' ? '显示环境复核 · 约 2 分钟' : '首次校准 · 约 10–15 分钟'}
+          {mode === "review"
+            ? "显示环境复核 · 约 2 分钟"
+            : "开始之前 · 约 10–15 分钟"}
         </p>
         <h1 id="product-title">Color Master</h1>
         <p className="intro-lede">
-          在这台固定显示器上测量你的红绿色彩辨别能力，再生成可验证的个人增强。
+          你眼中的世界，和别人一样吗？
+          <br />
+          在这里，你可以看到画家创作时看到的颜色。
         </p>
         <p className="boundary-note">
-          这是行为个性化色彩工具，不提供医学诊断，也不声称复制他人的主观颜色体验。
+          色弱大多来自基因，我们没法治好你的眼睛。但我们可以通过一套色彩转换，让你瞥见色觉正常的人眼中的名画、花朵和世界。这不是医学治疗，而是一次看看「另一种颜色」的机会。
         </p>
       </section>
 
@@ -102,7 +108,7 @@ export function DisplaySetup({
           <p className="section-number">02</p>
           <div>
             <h2>固定显示环境</h2>
-            <p>请在整个校准和画作体验期间保持这些设置。</p>
+            <p>请在整个测试和看画期间保持这些设置。</p>
             <label className="check-row">
               <input
                 type="checkbox"
@@ -133,11 +139,11 @@ export function DisplaySetup({
         <div className="setup-action">
           <p>数据仅保存在当前浏览器中。</p>
           <button className="primary-button" type="submit" disabled={!ready}>
-            {mode === 'review' ? '开始短复核' : '开始校准'}{' '}
+            {mode === "review" ? "开始短复核" : "开始测试"}{" "}
             <span aria-hidden="true">→</span>
           </button>
         </div>
       </form>
     </main>
-  )
+  );
 }

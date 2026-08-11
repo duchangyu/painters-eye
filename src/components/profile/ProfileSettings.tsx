@@ -345,7 +345,7 @@ export function ProfileSettings({
                 type="button"
                 onClick={onRecalibrate}
               >
-                重新完整校准
+                重新完整测试
               </button>
             )}
           </div>

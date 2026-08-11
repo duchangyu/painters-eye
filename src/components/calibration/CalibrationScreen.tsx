@@ -1,73 +1,73 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import type { PublicCalibrationTrial } from '../../calibration/session'
-import type { TargetDirection } from '../../domain/calibration'
-import { ProgressBar } from '../common/ProgressBar'
-import { PlateCanvas } from './PlateCanvas'
-import { isE2eMode } from '../../config/runtime'
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { PublicCalibrationTrial } from "../../calibration/session";
+import type { TargetDirection } from "../../domain/calibration";
+import { ProgressBar } from "../common/ProgressBar";
+import { PlateCanvas } from "./PlateCanvas";
+import { isE2eMode } from "../../config/runtime";
 
 export interface CalibrationAnswer {
-  readonly trialId: string
-  readonly selectedDirection: TargetDirection
-  readonly reactionTimeMs: number
+  readonly trialId: string;
+  readonly selectedDirection: TargetDirection;
+  readonly reactionTimeMs: number;
 }
 
 export interface CalibrationEngine {
-  readonly trials: readonly PublicCalibrationTrial[]
-  readonly recordAnswer: (answer: CalibrationAnswer) => void | Promise<void>
-  readonly saveDraft: (completedTrials: number) => void | Promise<void>
+  readonly trials: readonly PublicCalibrationTrial[];
+  readonly recordAnswer: (answer: CalibrationAnswer) => void | Promise<void>;
+  readonly saveDraft: (completedTrials: number) => void | Promise<void>;
 }
 
 export interface CalibrationScreenProps {
-  readonly engine: CalibrationEngine
-  readonly onComplete: () => void
-  readonly eyebrow?: string
-  readonly title?: string
-  readonly note?: string
-  readonly progressName?: string
-  readonly testConditionByTrialId?: ReadonlyMap<string, string>
-  readonly initialTrialIndex?: number
+  readonly engine: CalibrationEngine;
+  readonly onComplete: () => void;
+  readonly eyebrow?: string;
+  readonly title?: string;
+  readonly note?: string;
+  readonly progressName?: string;
+  readonly testConditionByTrialId?: ReadonlyMap<string, string>;
+  readonly initialTrialIndex?: number;
 }
 
 const KEY_DIRECTIONS: Readonly<Record<string, TargetDirection>> = {
-  ArrowUp: 'up',
-  ArrowRight: 'right',
-  ArrowDown: 'down',
-  ArrowLeft: 'left',
-}
+  ArrowUp: "up",
+  ArrowRight: "right",
+  ArrowDown: "down",
+  ArrowLeft: "left",
+};
 
 export function CalibrationScreen({
   engine,
   onComplete,
-  eyebrow = '自适应辨色校准',
-  title = '辨认开口方向',
-  note = '看不清时请凭第一感觉选择；测量过程中不会显示正确答案。',
-  progressName = '校准进度',
+  eyebrow = "色彩分辨测试",
+  title = "辨认开口方向",
+  note = "看不清时请凭第一感觉选择；测试过程中不会显示正确答案。",
+  progressName = "测试进度",
   testConditionByTrialId,
   initialTrialIndex = 0,
 }: CalibrationScreenProps) {
   const [trialIndex, setTrialIndex] = useState(() =>
     Math.min(engine.trials.length, Math.max(0, initialTrialIndex)),
-  )
-  const [paused, setPaused] = useState(false)
-  const startedAt = useRef<number | null>(null)
-  const trial = engine.trials[trialIndex]
+  );
+  const [paused, setPaused] = useState(false);
+  const startedAt = useRef<number | null>(null);
+  const trial = engine.trials[trialIndex];
 
   // Restart the reaction-time clock whenever a pause ends (and on mount):
   // time spent looking at the pause overlay must not count as hesitation.
   useEffect(() => {
     if (!paused) {
-      startedAt.current = performance.now()
+      startedAt.current = performance.now();
     }
-  }, [paused])
+  }, [paused]);
 
   const answer = useCallback(
     (direction: TargetDirection) => {
       if (paused || !trial) {
-        return
+        return;
       }
 
-      const now = performance.now()
-      const nextIndex = trialIndex + 1
+      const now = performance.now();
+      const nextIndex = trialIndex + 1;
       void engine.recordAnswer({
         trialId: trial.id,
         selectedDirection: direction,
@@ -75,28 +75,28 @@ export function CalibrationScreen({
           startedAt.current === null
             ? 0
             : Math.max(0, Math.round(now - startedAt.current)),
-      })
-      void engine.saveDraft(nextIndex)
-      setTrialIndex(nextIndex)
-      startedAt.current = now
+      });
+      void engine.saveDraft(nextIndex);
+      setTrialIndex(nextIndex);
+      startedAt.current = now;
       if (nextIndex >= engine.trials.length) {
-        onComplete()
+        onComplete();
       }
     },
     [engine, onComplete, paused, trial, trialIndex],
-  )
+  );
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
-      const direction = KEY_DIRECTIONS[event.key]
+      const direction = KEY_DIRECTIONS[event.key];
       if (direction && !event.repeat) {
-        event.preventDefault()
-        answer(direction)
+        event.preventDefault();
+        answer(direction);
       }
     }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [answer])
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [answer]);
 
   if (!trial) {
     return (
@@ -104,7 +104,7 @@ export function CalibrationScreen({
         <p className="folio">测量阶段完成</p>
         <h1>正在整理结果…</h1>
       </main>
-    )
+    );
   }
 
   return (
@@ -119,7 +119,7 @@ export function CalibrationScreen({
           type="button"
           onClick={() => setPaused((value) => !value)}
         >
-          {paused ? '继续' : '暂停'}
+          {paused ? "继续" : "暂停"}
         </button>
       </header>
 
@@ -155,5 +155,5 @@ export function CalibrationScreen({
 
       <p className="measurement-note">{note}</p>
     </main>
-  )
+  );
 }
