@@ -47,7 +47,7 @@ export function ResultsScreen({
         <h1>{metrics.passed ? "测试通过" : "建议重新测一次"}</h1>
         <p>
           {metrics.passed
-            ? "这套为你定制的转换已经生效，可以开始欣赏名画了。结果只代表你在这台显示器上的表现，不是医学诊断。"
+            ? "为你调整的画面效果已经生效，可以开始欣赏名画了。结果只代表你在这台显示器上的表现，不是医学诊断。"
             : "别担心，这不是你的问题——结果不稳定通常只是测试时的状态波动。"}
         </p>
       </header>
@@ -63,12 +63,12 @@ export function ResultsScreen({
               →
             </div>
             <div className="simple-highlight">
-              <span>用专属转换答对</span>
+              <span>调整画面后答对</span>
               <strong>{percent(personalized.accuracy)}</strong>
             </div>
           </div>
           <p className="simple-caption">
-            同一组辨色题，转换之后你明显更容易分清颜色了。
+            同一组辨色题：左边是原图，右边是为你调整过的画面——调整之后，你明显更容易分清颜色了。
           </p>
         </section>
       ) : (
