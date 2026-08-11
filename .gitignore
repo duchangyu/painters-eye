@@ -11,3 +11,4 @@ blob-report/
 .omc/
 .env
 docs/reviews/
+.env*
