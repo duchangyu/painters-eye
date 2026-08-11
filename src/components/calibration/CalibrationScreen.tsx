@@ -40,7 +40,7 @@ export function CalibrationScreen({
   onComplete,
   eyebrow = "色彩分辨测试",
   title = "辨认开口方向",
-  note = "看不清时请凭第一感觉选择；测试过程中不会显示正确答案。",
+  note = "这里没有对错——看不清就凭第一感觉选；测试过程中不会显示正确答案。",
   progressName = "测试进度",
   testConditionByTrialId,
   initialTrialIndex = 0,

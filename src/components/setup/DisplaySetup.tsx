@@ -137,6 +137,11 @@ export function DisplaySetup({
         </fieldset>
 
         <div className="setup-action">
+          {mode !== "review" && (
+            <p>
+              接下来的色觉测试会花几分钟，请耐心作答。它不是为了考倒你，也不是要证明你「有问题」——而是为了摸清你眼睛的辨色特点：测得越准，之后的画面调整就越贴合你的眼睛，你就越接近画家眼中真实的世界。
+            </p>
+          )}
           <p>数据仅保存在当前浏览器中。</p>
           <button className="primary-button" type="submit" disabled={!ready}>
             {mode === "review" ? "开始短复核" : "开始测试"}{" "}

@@ -16,7 +16,7 @@ export function IntroScreen({ onStart }: IntroScreenProps) {
         <p className="folio"> painter's eye · 世界名画预览</p>
         <h1 id="product-title">Painter's Eye</h1>
         <p className="intro-lede">
-          瞥见画家创作时看到的颜色。
+          看见画家创作时看到的颜色。
           <br />
           专为红绿色弱、色盲朋友设计。
         </p>
@@ -47,7 +47,10 @@ export function IntroScreen({ onStart }: IntroScreenProps) {
               </li>
               <li>
                 <strong>色彩分辨测试</strong>
-                <span>约 8–12 分钟：辨认开口方向，测出你在这块屏幕上的辨色阈值。</span>
+                <span>
+                  约 8–12
+                  分钟：辨认开口方向，测出你在这块屏幕上的辨色阈值。没有对错，越放松越准。
+                </span>
               </li>
               <li>
                 <strong>浏览世界名画</strong>
