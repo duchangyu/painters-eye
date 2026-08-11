@@ -67,7 +67,7 @@ describe("ResultsScreen", () => {
     expect(screen.getByText("结果可靠度")).toBeVisible();
     expect(screen.getByText("86%")).toBeVisible();
     expect(
-      screen.getByText("这些结果描述当前显示器上的表现，不是医学诊断。"),
+      screen.getByText(/结果只代表你在这台显示器上的表现，不是医学诊断。/),
     ).toBeVisible();
     await user.click(screen.getByRole("button", { name: "保存配置并继续" }));
     expect(onContinue).toHaveBeenCalledOnce();
