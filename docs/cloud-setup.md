@@ -1,4 +1,4 @@
-# Color Master 云端服务配置指南
+# Painter's Eye 云端服务配置指南
 
 本应用已集成 **Clerk**（认证）+ **Supabase**（数据库/Edge Functions）+ **Stripe**（付费，可选）。
 

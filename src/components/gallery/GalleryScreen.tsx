@@ -69,7 +69,7 @@ export function GalleryScreen({
                 <h2>{artwork.titleZh}</h2>
                 <p className="original-title">{artwork.titleOriginal}</p>
                 <p className="artwork-credit">
-                  {artwork.artist} · {artwork.date}
+                  {artwork.period} · {artwork.artist} · {artwork.date}
                 </p>
                 <div className="curatorial-note">
                   <strong>为什么选择这幅作品</strong>

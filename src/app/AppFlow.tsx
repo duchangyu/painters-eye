@@ -18,6 +18,7 @@ import {
   type CalibrationEngine,
 } from "../components/calibration/CalibrationScreen";
 import { GalleryScreen } from "../components/gallery/GalleryScreen";
+import { IntroScreen } from "../components/intro/IntroScreen";
 import { ProfileSettings } from "../components/profile/ProfileSettings";
 import { ResultsScreen } from "../components/results/ResultsScreen";
 import { DisplaySetup } from "../components/setup/DisplaySetup";
@@ -96,6 +97,23 @@ export function AppFlow() {
   const [selectedArtwork, setSelectedArtwork] = useState<ArtworkRecord | null>(
     null,
   );
+
+  // Skip the intro for returning users who have already seen it and have no
+  // saved display conditions to restore. If display conditions exist, the
+  // restore effect below will route directly to setup/gallery/quick-check.
+  useEffect(() => {
+    if (isE2eMode) {
+      flow.beginSetup();
+      return;
+    }
+    const browserStorage = globalThis.window?.localStorage;
+    if (!browserStorage) return;
+    if (browserStorage.getItem("color-master:display-conditions")) return;
+    if (browserStorage.getItem("painters-eye:seen-intro") === "1") {
+      flow.beginSetup();
+    }
+  }, [flow]);
+
   const calibrationSeed =
     calibrationRun === 0 && calibrationDraft
       ? calibrationDraft.seed
@@ -480,6 +498,7 @@ export function AppFlow() {
       titleOriginal: "个人图片",
       artist: "仅在本机处理",
       date: "当前会话",
+      period: "个人图片",
       imagePath,
       objectPageUrl: "about:blank",
       imageSourceUrl: imagePath,
@@ -500,6 +519,9 @@ export function AppFlow() {
     setSelectedArtwork(null);
   }
 
+  if (flow.phase === "intro") {
+    return <IntroScreen onStart={flow.beginSetup} />;
+  }
   if (flow.phase === "setup") {
     return (
       <DisplaySetup

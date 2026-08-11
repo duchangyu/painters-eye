@@ -5,7 +5,9 @@ import { App } from "./App";
 describe("App", () => {
   it("explains the product boundary", () => {
     render(<App />);
-    expect(screen.getByRole("heading", { name: "Color Master" })).toBeVisible();
-    expect(screen.getByText(/不是医学治疗/)).toBeVisible();
+    expect(
+      screen.getByRole("heading", { name: "Painter's Eye" }),
+    ).toBeVisible();
+    expect(screen.getByText(/不是医学诊断/)).toBeVisible();
   });
 });

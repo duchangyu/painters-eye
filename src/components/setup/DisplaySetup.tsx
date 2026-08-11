@@ -63,7 +63,7 @@ export function DisplaySetup({
             ? "显示环境复核 · 约 2 分钟"
             : "开始之前 · 约 10–15 分钟"}
         </p>
-        <h1 id="product-title">Color Master</h1>
+        <h1 id="product-title">Painter's Eye</h1>
         <p className="intro-lede">
           你眼中的世界，和别人一样吗？
           <br />

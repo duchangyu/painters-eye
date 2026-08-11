@@ -1,4 +1,4 @@
-# Color Master MVP 验证协议
+# Painter's Eye MVP 验证协议
 
 版本：1.1（2026-08-10：盲测改为配对设计并按个人阈值选题）  
 适用算法：`1.1.0-mvp-adaptive` 及同一规则的后续补丁版  

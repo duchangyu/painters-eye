@@ -1,7 +1,7 @@
 {
-  "name": "color-master-mvp",
+  "name": "painters-eye",
   "version": "1.0.0",
-  "description": "Personalized red-green color discrimination and artwork compensation",
+  "description": "Help people with red-green color vision deficiency appreciate world-famous paintings through normal-vision simulation",
   "private": true,
   "type": "module",
   "engines": {

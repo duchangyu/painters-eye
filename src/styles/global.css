@@ -198,6 +198,55 @@ fieldset.form-section {
   color: var(--muted);
 }
 
+.intro-steps,
+.intro-expectations {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.intro-steps li {
+  display: grid;
+  gap: 0.2rem;
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.intro-steps li:first-child {
+  padding-top: 0;
+}
+
+.intro-steps li:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.intro-steps strong,
+.intro-expectations li::before {
+  color: var(--ink);
+}
+
+.intro-steps span {
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.intro-expectations li {
+  position: relative;
+  padding-left: 1.2rem;
+  margin: 0.5rem 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.intro-expectations li::before {
+  position: absolute;
+  left: 0;
+  content: '·';
+  font-weight: 700;
+}
+
 .field-label {
   display: block;
   margin: 1.5rem 0 0.4rem;
