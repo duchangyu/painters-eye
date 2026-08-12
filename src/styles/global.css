@@ -1634,6 +1634,45 @@ fieldset.form-section {
   flex-wrap: wrap;
 }
 
+.science-details {
+  margin: 1rem 0 0;
+  border: 1px solid var(--line);
+  background: rgb(247 244 237 / 80%);
+}
+
+.science-details summary {
+  padding: 0.9rem 1.1rem;
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.science-details summary::marker {
+  color: var(--muted);
+}
+
+.science-details p {
+  margin: 0;
+  padding: 0 1.1rem 0.9rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.7;
+}
+
+.science-details p:first-of-type {
+  padding-top: 0.2rem;
+}
+
+.science-details strong {
+  color: var(--ink);
+}
+
+.science-page .setup-action {
+  display: grid;
+  gap: 1.5rem;
+  justify-items: start;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

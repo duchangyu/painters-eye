@@ -11,6 +11,7 @@ export type AppPhase =
   | "results"
   | "gallery"
   | "profile"
+  | "science"
   | "quick-check"
   | "quick-check-result";
 
@@ -74,6 +75,8 @@ export function useAppFlow() {
   );
   const openGallery = useCallback(() => setPhase("gallery"), []);
   const openProfile = useCallback(() => setPhase("profile"), []);
+  const openScience = useCallback(() => setPhase("science"), []);
+  const showIntro = useCallback(() => setPhase("intro"), []);
   const reviewDisplay = useCallback(() => setPhase("setup"), []);
 
   return {
@@ -91,6 +94,8 @@ export function useAppFlow() {
     showQuickCheckResult,
     openGallery,
     openProfile,
+    openScience,
+    showIntro,
     reviewDisplay,
   };
 }

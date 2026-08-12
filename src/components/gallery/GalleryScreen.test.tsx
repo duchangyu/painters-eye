@@ -19,6 +19,16 @@ function renderGallery(overrides: Partial<Parameters<typeof GalleryScreen>[0]>) 
 }
 
 describe("GalleryScreen", () => {
+  it("opens the science explainer from the header", async () => {
+    const user = userEvent.setup();
+    const props = renderGallery({ onOpenScience: vi.fn() });
+
+    await user.click(
+      screen.getByRole("button", { name: "背后的科学原理" }),
+    );
+    expect(props.onOpenScience).toHaveBeenCalledOnce();
+  });
+
   it("presents twelve local, explained works and opens a selection", async () => {
     const user = userEvent.setup();
     const props = renderGallery({});

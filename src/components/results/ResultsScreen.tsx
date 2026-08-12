@@ -8,6 +8,7 @@ export interface ResultsScreenProps {
   readonly onContinue: () => void;
   readonly onRecalibrate?: () => void;
   readonly onRetryValidation?: () => void;
+  readonly onOpenScience?: () => void;
 }
 
 function percent(value: number): string {
@@ -24,6 +25,7 @@ export function ResultsScreen({
   onContinue,
   onRecalibrate,
   onRetryValidation,
+  onOpenScience,
 }: ResultsScreenProps) {
   const [showDetails, setShowDetails] = useState(false);
 
@@ -115,6 +117,15 @@ export function ResultsScreen({
         >
           {showDetails ? "收起详细数据" : "查看详细数据"}
         </button>
+        {onOpenScience && (
+          <button
+            className="text-button"
+            type="button"
+            onClick={onOpenScience}
+          >
+            这套转换是怎么算出来的？
+          </button>
+        )}
       </div>
 
       {showDetails && (

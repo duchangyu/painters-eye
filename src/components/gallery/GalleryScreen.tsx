@@ -9,6 +9,7 @@ export interface GalleryScreenProps {
   readonly onAddUrl: (url: string) => Promise<string | null>;
   readonly onDeleteImage: (id: string) => void;
   readonly onOpenProfile?: () => void;
+  readonly onOpenScience?: () => void;
   /** Shown while the gallery runs on a generic preset instead of a
    * personalized, validated profile. */
   readonly presetBanner?: {
@@ -25,6 +26,7 @@ export function GalleryScreen({
   onAddUrl,
   onDeleteImage,
   onOpenProfile,
+  onOpenScience,
   presetBanner,
 }: GalleryScreenProps) {
   return (
@@ -38,6 +40,15 @@ export function GalleryScreen({
           <p>
             先看你熟悉的画面，再切换到正常视觉模式。你会看到，色觉正常的人在欣赏同一幅画时，可能注意到哪些你平时错过的细节。也可以上传或粘贴链接，看你自己的图片。
           </p>
+          {onOpenScience && (
+            <button
+              className="text-button"
+              type="button"
+              onClick={onOpenScience}
+            >
+              背后的科学原理
+            </button>
+          )}
           {onOpenProfile && (
             <button
               className="text-button"

@@ -32,6 +32,23 @@ describe("IntroScreen", () => {
     expect(onStartPrecise).toHaveBeenCalledOnce();
   });
 
+  it("opens the science explainer when offered", async () => {
+    const user = userEvent.setup();
+    const onOpenScience = vi.fn();
+    render(
+      <IntroScreen
+        onStartQuick={vi.fn()}
+        onStartPrecise={vi.fn()}
+        onOpenScience={onOpenScience}
+      />,
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: /深入了解背后的科学原理/ }),
+    );
+    expect(onOpenScience).toHaveBeenCalledOnce();
+  });
+
   it("records that the user has seen the intro before starting", async () => {
     const user = userEvent.setup();
     const setItem = vi.fn();

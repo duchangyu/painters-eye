@@ -78,6 +78,24 @@ describe("ResultsScreen", () => {
     expect(onContinue).toHaveBeenCalledOnce();
   });
 
+  it("opens the science explainer when offered", async () => {
+    const user = userEvent.setup();
+    const onOpenScience = vi.fn();
+    render(
+      <ResultsScreen
+        metrics={metrics}
+        profile={profile}
+        onContinue={vi.fn()}
+        onOpenScience={onOpenScience}
+      />,
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "这套转换是怎么算出来的？" }),
+    );
+    expect(onOpenScience).toHaveBeenCalledOnce();
+  });
+
   it("prioritizes a quick validation retry when validation fails", async () => {
     const user = userEvent.setup();
     const onRetryValidation = vi.fn();

@@ -29,6 +29,7 @@ import { GalleryScreen } from "../components/gallery/GalleryScreen";
 import { IntroScreen } from "../components/intro/IntroScreen";
 import { ProfileSettings } from "../components/profile/ProfileSettings";
 import { ResultsScreen } from "../components/results/ResultsScreen";
+import { ScienceScreen } from "../components/science/ScienceScreen";
 import { ScreeningResult } from "../components/screening/ScreeningResult";
 import { DisplaySetup } from "../components/setup/DisplaySetup";
 import { ArtworkViewer, type ViewerDisplayState } from "../components/viewer/ArtworkViewer";
@@ -125,6 +126,11 @@ export function AppFlow() {
   const [selectedArtwork, setSelectedArtwork] = useState<ArtworkRecord | null>(
     null,
   );
+  // Remembers which screen the science explainer was opened from, so its
+  // back button returns to the right place.
+  const [scienceReturn, setScienceReturn] = useState<
+    "intro" | "gallery" | "results"
+  >("intro");
   // Display mode carries across artworks so switching paintings never resets
   // the user's enhancement/zoom setup.
   const [viewerDisplay, setViewerDisplay] = useState<ViewerDisplayState>({
@@ -757,6 +763,21 @@ export function AppFlow() {
       <IntroScreen
         onStartQuick={startScreening}
         onStartPrecise={flow.beginSetup}
+        onOpenScience={() => {
+          setScienceReturn("intro");
+          flow.openScience();
+        }}
+      />
+    );
+  }
+  if (flow.phase === "science") {
+    return (
+      <ScienceScreen
+        onBack={() => {
+          if (scienceReturn === "gallery") flow.openGallery();
+          else if (scienceReturn === "results") flow.showResults();
+          else flow.showIntro();
+        }}
       />
     );
   }
@@ -827,6 +848,10 @@ export function AppFlow() {
         onContinue={saveProfileAndContinue}
         onRecalibrate={restartCalibration}
         onRetryValidation={retryValidation}
+        onOpenScience={() => {
+          setScienceReturn("results");
+          flow.openScience();
+        }}
       />
     );
   }
@@ -948,6 +973,10 @@ export function AppFlow() {
         onAddUrl={addUserImageFromUrl}
         onDeleteImage={deleteUserImage}
         onOpenProfile={activeProfile ? flow.openProfile : undefined}
+        onOpenScience={() => {
+          setScienceReturn("gallery");
+          flow.openScience();
+        }}
         presetBanner={
           isPresetMode && presetLabel
             ? { labelZh: presetLabel, onUpgrade: flow.beginSetup }

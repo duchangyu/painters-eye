@@ -1,9 +1,10 @@
 export interface IntroScreenProps {
   readonly onStartQuick: () => void;
   readonly onStartPrecise: () => void;
+  readonly onOpenScience?: () => void;
 }
 
-export function IntroScreen({ onStartQuick, onStartPrecise }: IntroScreenProps) {
+export function IntroScreen({ onStartQuick, onStartPrecise, onOpenScience }: IntroScreenProps) {
   return (
     <main className="setup-page">
       <header className="brand-lockup">
@@ -67,6 +68,15 @@ export function IntroScreen({ onStartQuick, onStartPrecise }: IntroScreenProps) 
             <p>
               所有回答、配置和画作选择都只保存在当前浏览器中；你随时可以在「配置与备份」中导出或删除。
             </p>
+            {onOpenScience && (
+              <button
+                className="text-button"
+                type="button"
+                onClick={onOpenScience}
+              >
+                深入了解背后的科学原理 →
+              </button>
+            )}
           </div>
         </div>
 
