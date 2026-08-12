@@ -40,25 +40,17 @@ export function IntroScreen({ onStartQuick, onStartPrecise }: IntroScreenProps) 
         <div className="form-section">
           <p className="section-number">02</p>
           <div>
-            <h2>两条路径</h2>
+            <h2>两步就好</h2>
             <ul className="intro-steps">
               <li>
-                <strong>快速体验</strong>
+                <strong>辨色小测试</strong>
                 <span>
-                  约 1 分钟：8
-                  道辨色题，用通用预设近似增强画面。适合先感受一下效果。
-                </span>
-              </li>
-              <li>
-                <strong>个性化精准测试</strong>
-                <span>
-                  约 10–15
-                  分钟：完整测量你在这块屏幕上的辨色特点，盲测验证后效果最准。
+                  辨认几个圆环的开口方向，测测你的眼睛和这块屏幕。没有对错，越放松越准。
                 </span>
               </li>
               <li>
                 <strong>浏览世界名画</strong>
-                <span>先看原图，再切换到正常视觉模拟，比较你平时看到的和画家可能看到的。</span>
+                <span>先看原图，再一键切换，比较你平时看到的和画家可能看到的。</span>
               </li>
             </ul>
           </div>
@@ -78,20 +70,8 @@ export function IntroScreen({ onStartQuick, onStartPrecise }: IntroScreenProps) 
           </div>
         </div>
 
-        <div className="form-section">
-          <p className="section-number">04</p>
-          <div>
-            <h2>请先有合理预期</h2>
-            <ul className="intro-expectations">
-              <li>这不是医学诊断或治疗。</li>
-              <li>效果只在同一台显示器、相近亮度和色彩设置下稳定。</li>
-              <li>认真、快速地作答，结果才可靠。</li>
-            </ul>
-          </div>
-        </div>
-
         <div className="setup-action">
-          <p>先用 1 分钟快速体验，或直接做个性化精准测试。</p>
+          <p>测试约 1 分钟。想要最准的效果，也可以选完整版。</p>
           <div className="intro-actions">
             <button
               className="primary-button"
@@ -101,7 +81,7 @@ export function IntroScreen({ onStartQuick, onStartPrecise }: IntroScreenProps) 
                 onStartQuick();
               }}
             >
-              快速体验 · 约 1 分钟 <span aria-hidden="true">→</span>
+              开始测试 · 约 1 分钟 <span aria-hidden="true">→</span>
             </button>
             <button
               className="quiet-button"
@@ -111,10 +91,14 @@ export function IntroScreen({ onStartQuick, onStartPrecise }: IntroScreenProps) 
                 onStartPrecise();
               }}
             >
-              个性化精准测试 · 约 10–15 分钟
+              完整版测试 · 约 10–15 分钟
             </button>
           </div>
         </div>
+
+        <p className="intro-fineprint">
+          这不是医学诊断或治疗，也不能复制正常色觉者的主观颜色体验；效果只在同一台显示器、相近亮度和色彩设置下稳定；认真、快速地作答，结果才可靠。
+        </p>
       </div>
     </main>
   );

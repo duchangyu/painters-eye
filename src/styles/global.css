@@ -198,8 +198,7 @@ fieldset.form-section {
   color: var(--muted);
 }
 
-.intro-steps,
-.intro-expectations {
+.intro-steps {
   margin: 0;
   padding: 0;
   list-style: none;
@@ -221,8 +220,7 @@ fieldset.form-section {
   border-bottom: 0;
 }
 
-.intro-steps strong,
-.intro-expectations li::before {
+.intro-steps strong {
   color: var(--ink);
 }
 
@@ -232,19 +230,14 @@ fieldset.form-section {
   line-height: 1.6;
 }
 
-.intro-expectations li {
-  position: relative;
-  padding-left: 1.2rem;
-  margin: 0.5rem 0;
+.intro-fineprint {
+  margin: 0;
+  padding: 1rem 0 0.5rem;
+  border-top: 1px solid var(--line);
   color: var(--muted);
-  line-height: 1.6;
-}
-
-.intro-expectations li::before {
-  position: absolute;
-  left: 0;
-  content: '·';
-  font-weight: 700;
+  font-size: 0.75rem;
+  line-height: 1.7;
+  opacity: 0.75;
 }
 
 .field-label {

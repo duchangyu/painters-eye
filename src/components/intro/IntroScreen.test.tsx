@@ -16,18 +16,18 @@ describe("IntroScreen", () => {
       screen.getByRole("heading", { name: "Painter's Eye" }),
     ).toBeVisible();
     expect(screen.getByText(/专为红绿色弱、色盲朋友设计/)).toBeVisible();
-    expect(screen.getByText(/两条路径/)).toBeVisible();
+    expect(screen.getByText(/两步就好/)).toBeVisible();
     expect(screen.getByText(/它基于什么？/)).toBeVisible();
     expect(screen.getByText(/这不是医学诊断或治疗/)).toBeVisible();
 
     await user.click(
-      screen.getByRole("button", { name: /快速体验/ }),
+      screen.getByRole("button", { name: /开始测试/ }),
     );
     expect(onStartQuick).toHaveBeenCalledOnce();
     expect(onStartPrecise).not.toHaveBeenCalled();
 
     await user.click(
-      screen.getByRole("button", { name: /个性化精准测试/ }),
+      screen.getByRole("button", { name: /完整版测试/ }),
     );
     expect(onStartPrecise).toHaveBeenCalledOnce();
   });
@@ -49,7 +49,7 @@ describe("IntroScreen", () => {
     );
 
     await user.click(
-      screen.getByRole("button", { name: /快速体验/ }),
+      screen.getByRole("button", { name: /开始测试/ }),
     );
     expect(setItem).toHaveBeenCalledWith("painters-eye:seen-intro", "1");
   });
