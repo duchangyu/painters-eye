@@ -8,10 +8,18 @@ import {
   type QuickCheckAssessment,
   type QuickCheckResponse,
 } from "../calibration/quickCheck";
+import {
+  assessScreening,
+  createScreeningTrials,
+  toScreeningResponse,
+  type ScreeningOutcome,
+  type ScreeningResponse,
+} from "../calibration/screening";
 import type { DisplayConditions, TrialResponse } from "../domain/calibration";
 import type { CalibrationProfileV1 } from "../domain/profile";
 import type { ProfileValidationSummary } from "../domain/profile";
 import { buildCompensationLut, generateLut } from "../color/lut";
+import { findPreset, getPresetCompensation } from "../color/presets";
 import {
   CalibrationScreen,
   type CalibrationAnswer,
@@ -21,6 +29,7 @@ import { GalleryScreen } from "../components/gallery/GalleryScreen";
 import { IntroScreen } from "../components/intro/IntroScreen";
 import { ProfileSettings } from "../components/profile/ProfileSettings";
 import { ResultsScreen } from "../components/results/ResultsScreen";
+import { ScreeningResult } from "../components/screening/ScreeningResult";
 import { DisplaySetup } from "../components/setup/DisplaySetup";
 import { ArtworkViewer, type ViewerDisplayState } from "../components/viewer/ArtworkViewer";
 import { ARTWORKS, findArtwork, toUserArtworkRecord, type ArtworkRecord } from "../data/artworks";
@@ -60,6 +69,13 @@ import { useAppFlow } from "./useAppFlow";
 import { isE2eMode } from "../config/runtime";
 
 const SELECTED_ARTWORK_KEY = "color-master:selected-artwork";
+const PRESET_KEY = "painters-eye:preset";
+const E2E_ENTRY_KEY = "painters-eye:e2e-entry";
+
+function loadStoredPresetId(): string | null {
+  const stored = globalThis.window?.localStorage?.getItem(PRESET_KEY);
+  return stored && findPreset(stored) ? stored : null;
+}
 
 function profileValidationSummary(
   metrics: ValidationMetrics,
@@ -90,6 +106,7 @@ export function AppFlow() {
   const responses = useRef<TrialResponse[]>([]);
   const validationResponses = useRef<ValidationResponse[]>([]);
   const quickCheckResponses = useRef<QuickCheckResponse[]>([]);
+  const screeningResponses = useRef<ScreeningResponse[]>([]);
   const userImageUrls = useRef(new Map<string, string>());
   const [userImages, setUserImages] = useState<readonly ArtworkRecord[]>([]);
   const [profile, setProfile] = useState<FittedBehavioralProfile | null>(null);
@@ -101,6 +118,10 @@ export function AppFlow() {
   const [originalOnly, setOriginalOnly] = useState(false);
   const [calibrationRun, setCalibrationRun] = useState(0);
   const [validationRun, setValidationRun] = useState(0);
+  const [presetId, setPresetId] = useState<string | null>(loadStoredPresetId);
+  const [screeningRun, setScreeningRun] = useState(0);
+  const [screeningOutcome, setScreeningOutcome] =
+    useState<ScreeningOutcome | null>(null);
   const [selectedArtwork, setSelectedArtwork] = useState<ArtworkRecord | null>(
     null,
   );
@@ -115,20 +136,33 @@ export function AppFlow() {
 
   // Skip the intro for returning users who have already seen it and have no
   // saved display conditions to restore. If display conditions exist, the
-  // restore effect below will route directly to setup/gallery/quick-check.
+  // restore effect below will route directly to setup/gallery/quick-check; if
+  // only a fast-track preset exists, skip straight to the gallery.
   // Runs once per session: `flow` changes identity on every render, so an
   // unguarded effect would keep forcing the phase back to "setup".
   const introSkipHandled = useRef(false);
   useEffect(() => {
     if (introSkipHandled.current) return;
     introSkipHandled.current = true;
+    const browserStorage = globalThis.window?.localStorage;
     if (isE2eMode) {
-      flow.beginSetup();
+      const e2ePreset = browserStorage?.getItem(PRESET_KEY);
+      if (e2ePreset && findPreset(e2ePreset)) {
+        flow.openGallery();
+      } else if (browserStorage?.getItem(E2E_ENTRY_KEY) === "quick") {
+        flow.beginScreening();
+      } else {
+        flow.beginSetup();
+      }
       return;
     }
-    const browserStorage = globalThis.window?.localStorage;
     if (!browserStorage) return;
     if (browserStorage.getItem("color-master:display-conditions")) return;
+    const storedPreset = browserStorage.getItem(PRESET_KEY);
+    if (storedPreset && findPreset(storedPreset)) {
+      flow.openGallery();
+      return;
+    }
     if (browserStorage.getItem("painters-eye:seen-intro") === "1") {
       flow.beginSetup();
     }
@@ -272,6 +306,35 @@ export function AppFlow() {
       },
     };
   }, [quickCheckTrials]);
+  const screeningTrials = useMemo(
+    () => createScreeningTrials(20260813 + screeningRun * 31),
+    [screeningRun],
+  );
+  const screeningEngine = useMemo<CalibrationEngine>(() => {
+    const trialsById = new Map(
+      screeningTrials.map((trial) => [trial.id, trial]),
+    );
+    return {
+      trials: screeningTrials,
+      recordAnswer(answer: CalibrationAnswer) {
+        const trial = trialsById.get(answer.trialId);
+        if (!trial) return;
+        screeningResponses.current.push(toScreeningResponse(trial, answer));
+      },
+      saveDraft() {
+        // The fast track is 8 trials — shorter than the time it takes to
+        // decide whether to resume a draft. No draft on purpose.
+      },
+    };
+  }, [screeningTrials]);
+  const screeningAxisByTrialId = useMemo(
+    () => new Map(screeningTrials.map((trial) => [trial.id, trial.stimulus.axis])),
+    [screeningTrials],
+  );
+  const presetCompensation = useMemo(
+    () => (presetId ? getPresetCompensation(presetId) : null),
+    [presetId],
+  );
   const viewerLut = useMemo(
     () =>
       originalOnly
@@ -280,8 +343,10 @@ export function AppFlow() {
           ? buildCompensationLut(activeProfile.compensation)
           : profile
             ? buildCompensationLut(profile)
-            : generateLut(2, (color) => color),
-    [activeProfile, originalOnly, profile],
+            : presetCompensation
+              ? buildCompensationLut(presetCompensation)
+              : generateLut(2, (color) => color),
+    [activeProfile, originalOnly, presetCompensation, profile],
   );
 
   const restoreProfile = flow.restoreProfile;
@@ -324,6 +389,9 @@ export function AppFlow() {
             `color-master:quick-check:${candidate.id}`,
           ),
         });
+        // A saved personal profile always wins over a fast-track preset.
+        removeLocalStorage(PRESET_KEY);
+        setPresetId(null);
         setActiveProfile(candidate);
         const rememberedArtwork = findArtwork(
           browserStorage.getItem(SELECTED_ARTWORK_KEY) ?? "",
@@ -432,6 +500,9 @@ export function AppFlow() {
         await repository.promoteValidatedProfile(value);
         setActiveProfile(value);
         setOriginalOnly(false);
+        // The personalized profile replaces any fast-track preset for good.
+        removeLocalStorage(PRESET_KEY);
+        setPresetId(null);
         writeLocalStorage(`color-master:quick-check:${value.id}`, createdAt);
       } finally {
         repository.close();
@@ -495,6 +566,32 @@ export function AppFlow() {
       repository.close();
     }
     flow.openGallery();
+  }
+
+  function startScreening() {
+    screeningResponses.current = [];
+    flow.beginScreening();
+  }
+
+  function retryScreening() {
+    screeningResponses.current = [];
+    setScreeningRun((value) => value + 1);
+    flow.beginScreening();
+  }
+
+  function completeScreening() {
+    const outcome = assessScreening(screeningResponses.current);
+    setScreeningOutcome(outcome);
+    if (outcome.kind === "preset") {
+      setPresetId(outcome.presetId);
+      writeLocalStorage(PRESET_KEY, outcome.presetId);
+      setOriginalOnly(false);
+    } else if (outcome.kind === "normal-vision") {
+      // Nothing to enhance: keep the gallery in original-only mode so the
+      // viewer does not offer a toggle that would do nothing.
+      setOriginalOnly(true);
+    }
+    flow.showScreeningResult();
   }
 
   function restartCalibration() {
@@ -651,8 +748,41 @@ export function AppFlow() {
     setSelectedArtwork(null);
   }
 
+  const isPresetMode =
+    !originalOnly && !activeProfile && presetCompensation !== null;
+  const presetLabel = presetId ? findPreset(presetId)?.labelZh : undefined;
+
   if (flow.phase === "intro") {
-    return <IntroScreen onStart={flow.beginSetup} />;
+    return (
+      <IntroScreen
+        onStartQuick={startScreening}
+        onStartPrecise={flow.beginSetup}
+      />
+    );
+  }
+  if (flow.phase === "screening") {
+    return (
+      <CalibrationScreen
+        key={`screening-${screeningRun}`}
+        engine={screeningEngine}
+        onComplete={completeScreening}
+        eyebrow="快速体验 · 8 题"
+        title="辨认开口方向"
+        progressName="进度"
+        note="看不清就凭第一感觉选。开始前请确认夜览、原彩和护眼滤镜都已关闭。"
+        testConditionByTrialId={screeningAxisByTrialId}
+      />
+    );
+  }
+  if (flow.phase === "screening-result" && screeningOutcome) {
+    return (
+      <ScreeningResult
+        outcome={screeningOutcome}
+        onEnterGallery={flow.openGallery}
+        onStartPrecise={flow.beginSetup}
+        onRetry={retryScreening}
+      />
+    );
   }
   if (flow.phase === "setup") {
     return (
@@ -797,8 +927,10 @@ export function AppFlow() {
               ? 0
               : (activeProfile?.compensation.recommendedStrength ??
                 profile?.recommendedStrength ??
+                presetCompensation?.recommendedStrength ??
                 0)
           }
+          enhancementTag={isPresetMode ? "近似模式" : undefined}
           initialDisplay={viewerDisplay}
           onDisplayChange={setViewerDisplay}
           onBack={closeArtwork}
@@ -816,6 +948,11 @@ export function AppFlow() {
         onAddUrl={addUserImageFromUrl}
         onDeleteImage={deleteUserImage}
         onOpenProfile={activeProfile ? flow.openProfile : undefined}
+        presetBanner={
+          isPresetMode && presetLabel
+            ? { labelZh: presetLabel, onUpgrade: flow.beginSetup }
+            : undefined
+        }
       />
     );
   }

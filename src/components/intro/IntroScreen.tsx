@@ -1,8 +1,9 @@
 export interface IntroScreenProps {
-  readonly onStart: () => void;
+  readonly onStartQuick: () => void;
+  readonly onStartPrecise: () => void;
 }
 
-export function IntroScreen({ onStart }: IntroScreenProps) {
+export function IntroScreen({ onStartQuick, onStartPrecise }: IntroScreenProps) {
   return (
     <main className="setup-page">
       <header className="brand-lockup">
@@ -39,17 +40,20 @@ export function IntroScreen({ onStart }: IntroScreenProps) {
         <div className="form-section">
           <p className="section-number">02</p>
           <div>
-            <h2>三步流程</h2>
+            <h2>两条路径</h2>
             <ul className="intro-steps">
               <li>
-                <strong>记录显示环境</strong>
-                <span>约 2 分钟：屏幕名称、亮度，关闭 Night Shift 等色彩处理。</span>
+                <strong>快速体验</strong>
+                <span>
+                  约 1 分钟：8
+                  道辨色题，用通用预设近似增强画面。适合先感受一下效果。
+                </span>
               </li>
               <li>
-                <strong>色彩分辨测试</strong>
+                <strong>个性化精准测试</strong>
                 <span>
-                  约 8–12
-                  分钟：辨认开口方向，测出你在这块屏幕上的辨色阈值。没有对错，越放松越准。
+                  约 10–15
+                  分钟：完整测量你在这块屏幕上的辨色特点，盲测验证后效果最准。
                 </span>
               </li>
               <li>
@@ -87,17 +91,29 @@ export function IntroScreen({ onStart }: IntroScreenProps) {
         </div>
 
         <div className="setup-action">
-          <p>整个过程约 8–12 分钟。</p>
-          <button
-            className="primary-button"
-            type="button"
-            onClick={() => {
-              globalThis.localStorage?.setItem("painters-eye:seen-intro", "1");
-              onStart();
-            }}
-          >
-            我了解了，开始设置 <span aria-hidden="true">→</span>
-          </button>
+          <p>先用 1 分钟快速体验，或直接做个性化精准测试。</p>
+          <div className="intro-actions">
+            <button
+              className="primary-button"
+              type="button"
+              onClick={() => {
+                globalThis.localStorage?.setItem("painters-eye:seen-intro", "1");
+                onStartQuick();
+              }}
+            >
+              快速体验 · 约 1 分钟 <span aria-hidden="true">→</span>
+            </button>
+            <button
+              className="quiet-button"
+              type="button"
+              onClick={() => {
+                globalThis.localStorage?.setItem("painters-eye:seen-intro", "1");
+                onStartPrecise();
+              }}
+            >
+              个性化精准测试 · 约 10–15 分钟
+            </button>
+          </div>
         </div>
       </div>
     </main>

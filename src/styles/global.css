@@ -303,6 +303,14 @@ fieldset.form-section {
   font-size: 0.86rem;
 }
 
+.intro-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.75rem;
+  min-width: 19rem;
+}
+
 .primary-button,
 .quiet-button,
 .answer-pad button {
@@ -705,6 +713,34 @@ fieldset.form-section {
   line-height: 1.75;
 }
 
+.preset-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--instrument);
+}
+
+.preset-banner p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.preset-banner strong {
+  display: inline-block;
+  margin-right: 0.5rem;
+  color: var(--ink);
+}
+
+.preset-banner .quiet-button {
+  flex-shrink: 0;
+}
+
 .text-button {
   padding: 0 0 0.25rem;
   border: 0;
@@ -962,6 +998,14 @@ fieldset.form-section {
   gap: 0.6rem;
   color: #d9e2e7;
   font-size: 0.78rem;
+}
+
+.preset-tag {
+  padding: 0.1rem 0.45rem;
+  border: 1px solid currentcolor;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  opacity: 0.85;
 }
 
 .viewer-chrome {
@@ -1360,6 +1404,11 @@ fieldset.form-section {
 
   .setup-action,
   .calibration-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .preset-banner {
     align-items: stretch;
     flex-direction: column;
   }

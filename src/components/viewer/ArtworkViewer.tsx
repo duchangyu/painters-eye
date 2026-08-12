@@ -28,6 +28,10 @@ export interface ArtworkViewerProps {
   readonly onBack: () => void;
   readonly onPrevious: (() => void) | null;
   readonly onNext: (() => void) | null;
+  /** Small honesty tag shown next to the enhancement status while the
+   * enhancement comes from a generic preset rather than a personalized,
+   * validated profile. */
+  readonly enhancementTag?: string;
 }
 
 type RendererStatus = "waiting" | "webgl" | "cpu" | "error";
@@ -49,6 +53,7 @@ export function ArtworkViewer({
   onBack,
   onPrevious,
   onNext,
+  enhancementTag,
 }: ArtworkViewerProps) {
   const pageRef = useRef<HTMLElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
@@ -259,6 +264,9 @@ export function ArtworkViewer({
               }
             />
             {statusLabel}
+            {enhanced && enhancementTag && (
+              <span className="preset-tag">{enhancementTag}</span>
+            )}
           </div>
         </div>
       </header>

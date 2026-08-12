@@ -9,6 +9,12 @@ export interface GalleryScreenProps {
   readonly onAddUrl: (url: string) => Promise<string | null>;
   readonly onDeleteImage: (id: string) => void;
   readonly onOpenProfile?: () => void;
+  /** Shown while the gallery runs on a generic preset instead of a
+   * personalized, validated profile. */
+  readonly presetBanner?: {
+    readonly labelZh: string;
+    readonly onUpgrade: () => void;
+  };
 }
 
 export function GalleryScreen({
@@ -19,6 +25,7 @@ export function GalleryScreen({
   onAddUrl,
   onDeleteImage,
   onOpenProfile,
+  presetBanner,
 }: GalleryScreenProps) {
   return (
     <main className="gallery-page">
@@ -42,6 +49,23 @@ export function GalleryScreen({
           )}
         </div>
       </header>
+
+      {presetBanner && (
+        <section className="preset-banner" aria-label="近似模式提示">
+          <p>
+            <strong>近似模式</strong>
+            正在使用「{presetBanner.labelZh}」通用预设增强画面。
+            做一次个性化精准测试，效果会更贴合你。
+          </p>
+          <button
+            className="quiet-button"
+            type="button"
+            onClick={presetBanner.onUpgrade}
+          >
+            开始精准测试
+          </button>
+        </section>
+      )}
 
       <UserImageSection
         userImages={userImages}

@@ -4,6 +4,8 @@ import type { DisplayConditions } from "../domain/calibration";
 export type AppPhase =
   | "intro"
   | "setup"
+  | "screening"
+  | "screening-result"
   | "calibration"
   | "validation"
   | "results"
@@ -60,6 +62,11 @@ export function useAppFlow() {
     [recordConditions],
   );
   const beginValidation = useCallback(() => setPhase("validation"), []);
+  const beginScreening = useCallback(() => setPhase("screening"), []);
+  const showScreeningResult = useCallback(
+    () => setPhase("screening-result"),
+    [],
+  );
   const showResults = useCallback(() => setPhase("results"), []);
   const showQuickCheckResult = useCallback(
     () => setPhase("quick-check-result"),
@@ -74,6 +81,8 @@ export function useAppFlow() {
     displayConditions,
     beginSetup,
     beginCalibration,
+    beginScreening,
+    showScreeningResult,
     resumeCalibration,
     beginQuickCheck,
     restoreProfile,
