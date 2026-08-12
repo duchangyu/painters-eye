@@ -21,7 +21,7 @@ export const ARTWORKS: readonly ArtworkRecord[] = [
     artist: "文森特·梵高 Vincent van Gogh",
     date: "1888",
     period: "后印象派",
-    imagePath: "/artworks/night-cafe.jpg",
+    imagePath: `${import.meta.env.BASE_URL}artworks/night-cafe.jpg`,
     objectPageUrl: "https://artgallery.yale.edu/collections/objects/12507",
     imageSourceUrl:
       "https://images.collections.yale.edu/iiif/2/yuag:3b072179-2fc7-42bc-87cc-9ee4d782b270/full/2000,/0/default.jpg",
@@ -38,7 +38,7 @@ export const ARTWORKS: readonly ArtworkRecord[] = [
     artist: "文森特·梵高 Vincent van Gogh",
     date: "1890",
     period: "后印象派",
-    imagePath: "/artworks/roses.jpg",
+    imagePath: `${import.meta.env.BASE_URL}artworks/roses.jpg`,
     objectPageUrl: "https://www.metmuseum.org/art/collection/search/436534",
     imageSourceUrl:
       "https://images.metmuseum.org/CRDImages/ep/original/DP346475.jpg",
@@ -55,7 +55,7 @@ export const ARTWORKS: readonly ArtworkRecord[] = [
     artist: "保罗·塞尚 Paul Cézanne",
     date: "约 1891–1892",
     period: "后印象派",
-    imagePath: "/artworks/apples-pears.jpg",
+    imagePath: `${import.meta.env.BASE_URL}artworks/apples-pears.jpg`,
     objectPageUrl: "https://www.metmuseum.org/art/collection/search/435883",
     imageSourceUrl:
       "https://images.metmuseum.org/CRDImages/ep/original/DP-14936-049.jpg",
@@ -72,7 +72,7 @@ export const ARTWORKS: readonly ArtworkRecord[] = [
     artist: "文森特·梵高 Vincent van Gogh",
     date: "1888",
     period: "后印象派",
-    imagePath: "/artworks/oleanders.jpg",
+    imagePath: `${import.meta.env.BASE_URL}artworks/oleanders.jpg`,
     objectPageUrl: "https://www.metmuseum.org/art/collection/search/436530",
     imageSourceUrl:
       "https://images.metmuseum.org/CRDImages/ep/original/DT1494.jpg",
@@ -89,7 +89,7 @@ export const ARTWORKS: readonly ArtworkRecord[] = [
     artist: "文森特·梵高 Vincent van Gogh",
     date: "1889",
     period: "后印象派",
-    imagePath: "/artworks/women-picking-olives.jpg",
+    imagePath: `${import.meta.env.BASE_URL}artworks/women-picking-olives.jpg`,
     objectPageUrl: "https://www.metmuseum.org/art/collection/search/436536",
     imageSourceUrl:
       "https://images.metmuseum.org/CRDImages/ep/original/DP-17161-001.jpg",
@@ -106,7 +106,7 @@ export const ARTWORKS: readonly ArtworkRecord[] = [
     artist: "葛饰北斋 Katsushika Hokusai",
     date: "约 1830–1832",
     period: "浮世绘",
-    imagePath: "/artworks/great-wave.jpg",
+    imagePath: `${import.meta.env.BASE_URL}artworks/great-wave.jpg`,
     objectPageUrl: "https://www.metmuseum.org/art/collection/search/56353",
     imageSourceUrl:
       "https://images.metmuseum.org/CRDImages/as/original/DP141067.jpg",
@@ -123,7 +123,7 @@ export const ARTWORKS: readonly ArtworkRecord[] = [
     artist: "埃德加·德加 Edgar Degas",
     date: "1874",
     period: "印象派",
-    imagePath: "/artworks/dance-class.jpg",
+    imagePath: `${import.meta.env.BASE_URL}artworks/dance-class.jpg`,
     objectPageUrl: "https://www.metmuseum.org/art/collection/search/438817",
     imageSourceUrl:
       "https://images.metmuseum.org/CRDImages/ep/original/DP-20101-001.jpg",
@@ -140,7 +140,7 @@ export const ARTWORKS: readonly ArtworkRecord[] = [
     artist: "文森特·梵高 Vincent van Gogh",
     date: "1889",
     period: "后印象派",
-    imagePath: "/artworks/wheat-field-cypresses.jpg",
+    imagePath: `${import.meta.env.BASE_URL}artworks/wheat-field-cypresses.jpg`,
     objectPageUrl: "https://www.metmuseum.org/art/collection/search/436535",
     imageSourceUrl:
       "https://images.metmuseum.org/CRDImages/ep/original/DP-42549-001.jpg",
@@ -157,7 +157,7 @@ export const ARTWORKS: readonly ArtworkRecord[] = [
     artist: "保罗·高更 Paul Gauguin",
     date: "约 1894",
     period: "后印象派",
-    imagePath: "/artworks/farm-in-brittany.jpg",
+    imagePath: `${import.meta.env.BASE_URL}artworks/farm-in-brittany.jpg`,
     objectPageUrl: "https://www.metmuseum.org/art/collection/search/436448",
     imageSourceUrl:
       "https://images.metmuseum.org/CRDImages/ep/original/DP123847.jpg",
@@ -174,7 +174,7 @@ export const ARTWORKS: readonly ArtworkRecord[] = [
     artist: "汉斯·梅姆林 Hans Memling",
     date: "约 1490–1494",
     period: "文艺复兴",
-    imagePath: "/artworks/virgin-and-child.jpg",
+    imagePath: `${import.meta.env.BASE_URL}artworks/virgin-and-child.jpg`,
     objectPageUrl: "https://www.metmuseum.org/art/collection/search/437060",
     imageSourceUrl:
       "https://images.metmuseum.org/CRDImages/ep/original/DP-42409-001.jpg",
@@ -191,7 +191,7 @@ export const ARTWORKS: readonly ArtworkRecord[] = [
     artist: "乔治·德·拉·图尔 Georges de La Tour",
     date: "约 1630 年代",
     period: "巴洛克",
-    imagePath: "/artworks/fortune-teller.jpg",
+    imagePath: `${import.meta.env.BASE_URL}artworks/fortune-teller.jpg`,
     objectPageUrl: "https://www.metmuseum.org/art/collection/search/436838",
     imageSourceUrl:
       "https://images.metmuseum.org/CRDImages/ep/original/DP-14286-015.jpg",
@@ -209,7 +209,7 @@ export const ARTWORKS: readonly ArtworkRecord[] = [
     artist: "葛饰北斋 Katsushika Hokusai",
     date: "约 1833–1834",
     period: "浮世绘",
-    imagePath: "/artworks/hokusai-bridge.jpg",
+    imagePath: `${import.meta.env.BASE_URL}artworks/hokusai-bridge.jpg`,
     objectPageUrl: "https://www.metmuseum.org/art/collection/search/56202",
     imageSourceUrl:
       "https://images.metmuseum.org/CRDImages/as/original/DP141278.jpg",

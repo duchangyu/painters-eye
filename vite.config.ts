@@ -2,7 +2,11 @@ import react from "@vitejs/plugin-react";
 import { configDefaults, defineConfig } from "vitest/config";
 import { VitePWA } from "vite-plugin-pwa";
 
+// GitHub Pages serves the app from a project subpath; local dev stays at "/".
+const base = process.env.VITE_BASE_PATH ?? "/";
+
 export default defineConfig({
+  base,
   plugins: [
     react(),
     VitePWA({
@@ -20,15 +24,15 @@ export default defineConfig({
         background_color: "#efe8d9",
         display: "standalone",
         lang: "zh-CN",
-        start_url: "/",
+        start_url: base,
         icons: [
           {
-            src: "/icons/icon-192.png",
+            src: `${base}icons/icon-192.png`,
             sizes: "192x192",
             type: "image/png",
           },
           {
-            src: "/icons/icon-512.png",
+            src: `${base}icons/icon-512.png`,
             sizes: "512x512",
             type: "image/png",
           },
@@ -36,7 +40,7 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ["**/*.{html,js,css,json,png,jpg}"],
-        navigateFallback: "index.html",
+        navigateFallback: `${base}index.html`,
         cleanupOutdatedCaches: true,
       },
     }),
