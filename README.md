@@ -4,6 +4,8 @@ Painter's Eye 是一款本地优先的应用，帮助红绿色觉异常者在固
 
 Painter's Eye 不提供医学诊断，不治疗色觉异常，也不能复制正常色觉者的主观颜色体验。正常视觉模拟是一种帮助用户发现色彩关系的替代编码。
 
+在线体验：<https://painters-eye-gallery.vercel.app/>（镜像：<https://duchangyu.github.io/painters-eye/>）
+
 ## 当前状态
 
 这是等待首次固定显示器人体试验的 MVP 候选版。自动化验证已通过；人体感知结果尚未记录。请按 [人工显示器测试清单](docs/manual-display-checklist.md) 完成首次试验，不要用示例值代替实际结果。
