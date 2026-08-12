@@ -1,6 +1,9 @@
 import { useState } from "react";
 import type { FittedBehavioralProfile } from "../../profile/fitProfile";
-import type { ValidationMetrics } from "../../validation/metrics";
+import {
+  looksLikeNormalVision,
+  type ValidationMetrics,
+} from "../../validation/metrics";
 
 export interface ResultsScreenProps {
   readonly metrics: ValidationMetrics;
@@ -37,6 +40,9 @@ export function ResultsScreen({
   const generic = metrics.byCondition.generic;
   const controlDropped =
     personalized.controlAccuracy < original.controlAccuracy - 0.05;
+  // Baseline at the ceiling with nothing left to improve: this respondent
+  // likely has normal color vision and should not be sent into a retest loop.
+  const normalVision = looksLikeNormalVision(metrics);
 
   const failureReason = controlDropped
     ? "转换虽然让你答对了更多题，但有几道你本来能分清颜色的题答错了——这通常是手滑或状态波动。重新验证一次（约 2 分钟，不用重头来），通常就能通过。"
@@ -46,11 +52,19 @@ export function ResultsScreen({
     <main className="results-page">
       <header className="results-hero">
         <p className="folio">测试结果</p>
-        <h1>{metrics.passed ? "测试通过" : "建议重新测一次"}</h1>
+        <h1>
+          {metrics.passed
+            ? "测试通过"
+            : normalVision
+              ? "你的辨色表现在正常范围"
+              : "建议重新测一次"}
+        </h1>
         <p>
           {metrics.passed
             ? "为你调整的画面效果已经生效，可以开始欣赏名画了。结果只代表你在这台显示器上的表现，不是医学诊断。"
-            : "别担心，这不是你的问题——结果不稳定通常只是测试时的状态波动。"}
+            : normalVision
+              ? "看原图时你已经答对了绝大多数题目，增强画面没有额外提升——因为你本来就能分清这些颜色。这个结果只代表你在这台显示器上的表现，不是医学诊断。"
+              : "别担心，这不是你的问题——结果不稳定通常只是测试时的状态波动。"}
         </p>
       </header>
 
@@ -73,6 +87,14 @@ export function ResultsScreen({
             同一组辨色题：左边是原图，右边是为你调整过的画面——调整之后，你明显更容易分清颜色了。
           </p>
         </section>
+      ) : normalVision ? (
+        <section className="simple-verdict" aria-label="测试结论">
+          <p className="simple-reason">
+            看原图答对 {percent(original.accuracy)}，调整画面后答对{" "}
+            {percent(personalized.accuracy)}
+            ——没有提升空间，通常说明你的红绿分辨能力和大多数人相当，暂时不需要画面增强。可以直接去画廊看原图，也可以把这些画分享给需要的朋友。
+          </p>
+        </section>
       ) : (
         <section className="simple-verdict" aria-label="测试结论">
           <p className="simple-reason">{failureReason}</p>
@@ -83,6 +105,10 @@ export function ResultsScreen({
         {metrics.passed ? (
           <button className="primary-button" type="button" onClick={onContinue}>
             保存配置，开始欣赏名画
+          </button>
+        ) : normalVision ? (
+          <button className="primary-button" type="button" onClick={onContinue}>
+            去画廊看原图
           </button>
         ) : (
           <>
@@ -185,12 +211,14 @@ export function ResultsScreen({
             </div>
           </section>
 
-          <aside className="limitations-note">
-            <h2>这个配置能做什么、不能做什么</h2>
-            <p>
-              它不能让你看到“正常人眼中的颜色”——任何转换都做不到这一点。它做的是把你容易混淆的颜色拉开差距，让你更容易分辨。配置只适用于这台显示器和当前的环境光，换了显示器建议重新测试。
-            </p>
-          </aside>
+          {!normalVision && (
+            <aside className="limitations-note">
+              <h2>这个配置能做什么、不能做什么</h2>
+              <p>
+                它不能让你看到“正常人眼中的颜色”——任何转换都做不到这一点。它做的是把你容易混淆的颜色拉开差距，让你更容易分辨。配置只适用于这台显示器和当前的环境光，换了显示器建议重新测试。
+              </p>
+            </aside>
+          )}
         </div>
       )}
     </main>

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   evaluateValidation,
+  looksLikeNormalVision,
   summarizeValidation,
   type ValidationResponse,
 } from './metrics'
@@ -71,5 +72,65 @@ describe('validation metrics', () => {
       { condition: 'personalized', axis: 'blue-yellow-control', correct: false, reactionTimeMs: 850 },
     ]
     expect(summarizeValidation(damaged, 0.9).passed).toBe(false)
+  })
+})
+
+describe('looksLikeNormalVision', () => {
+  it('recognizes a high baseline the transform cannot beat as normal vision', () => {
+    // A normal-vision respondent: 7/8 on the original image, and the
+    // personalized transform has no headroom left to improve on that.
+    const responses: readonly ValidationResponse[] = [
+      ...Array.from({ length: 7 }, (): ValidationResponse => ({
+        condition: 'original',
+        axis: 'deutan',
+        correct: true,
+        reactionTimeMs: 1000,
+      })),
+      { condition: 'original', axis: 'protan', correct: false, reactionTimeMs: 1100 },
+      ...Array.from({ length: 7 }, (): ValidationResponse => ({
+        condition: 'personalized',
+        axis: 'deutan',
+        correct: true,
+        reactionTimeMs: 950,
+      })),
+      { condition: 'personalized', axis: 'protan', correct: false, reactionTimeMs: 1050 },
+    ]
+    const summary = summarizeValidation(responses, 0.9)
+    expect(summary.passed).toBe(false)
+    expect(looksLikeNormalVision(summary)).toBe(true)
+  })
+
+  it('does not flag a low baseline — that respondent genuinely needs a retest', () => {
+    const summary = summarizeValidation(responses, 0.9)
+    // Baseline here is 2/3 — real headroom exists, the retest copy applies.
+    expect(looksLikeNormalVision({ ...summary, passed: false })).toBe(false)
+  })
+
+  it('does not flag a passing session — enhancement genuinely helped', () => {
+    expect(looksLikeNormalVision(summarizeValidation(responses, 0.9))).toBe(false)
+  })
+
+  it('does not flag a high baseline the transform actually damaged', () => {
+    const responses: readonly ValidationResponse[] = [
+      ...Array.from({ length: 8 }, (): ValidationResponse => ({
+        condition: 'original',
+        axis: 'deutan',
+        correct: true,
+        reactionTimeMs: 1000,
+      })),
+      ...Array.from({ length: 6 }, (): ValidationResponse => ({
+        condition: 'personalized',
+        axis: 'deutan',
+        correct: true,
+        reactionTimeMs: 950,
+      })),
+      { condition: 'personalized', axis: 'deutan', correct: false, reactionTimeMs: 1000 },
+      { condition: 'personalized', axis: 'protan', correct: false, reactionTimeMs: 1000 },
+    ]
+    const summary = summarizeValidation(responses, 0.9)
+    expect(summary.passed).toBe(false)
+    // Original 100% vs personalized 75%: something hurt, so keep the retest
+    // advice rather than declaring normal vision.
+    expect(looksLikeNormalVision(summary)).toBe(false)
   })
 })

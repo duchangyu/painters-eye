@@ -118,4 +118,55 @@ describe("ResultsScreen", () => {
     await user.click(screen.getByRole("button", { name: "完整重新测试" }));
     expect(onRecalibrate).toHaveBeenCalledOnce();
   });
+
+  it("tells likely normal-vision users no enhancement is needed instead of asking for a retest", async () => {
+    const user = userEvent.setup();
+    const onContinue = vi.fn();
+    // Baseline at the ceiling: 7/8 on the original image, and the personalized
+    // transform ties it — there is no headroom to "pass" with.
+    const ceilingMetrics: ValidationMetrics = {
+      byCondition: {
+        original: {
+          accuracy: 0.875,
+          medianReactionTimeMs: 2400,
+          controlAccuracy: 1,
+        },
+        generic: {
+          accuracy: 1,
+          medianReactionTimeMs: 2300,
+          controlAccuracy: 1,
+        },
+        personalized: {
+          accuracy: 0.875,
+          medianReactionTimeMs: 2200,
+          controlAccuracy: 1,
+        },
+      },
+      accuracyImprovement: 0,
+      reactionTimeImprovementMs: 200,
+      repeatConsistency: 0.75,
+      confidence: "low",
+      passed: false,
+    };
+    render(
+      <ResultsScreen
+        metrics={ceilingMetrics}
+        profile={profile}
+        onContinue={onContinue}
+        onRecalibrate={vi.fn()}
+        onRetryValidation={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("你的辨色表现在正常范围")).toBeVisible();
+    expect(screen.queryByText("建议重新测一次")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "重新验证（约 2 分钟）" }),
+    ).not.toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("button", { name: "去画廊看原图" }),
+    );
+    expect(onContinue).toHaveBeenCalledOnce();
+  });
 });

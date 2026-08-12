@@ -113,3 +113,27 @@ export function evaluateValidation(metrics: ValidationMetrics) {
         metrics.byCondition.original.controlAccuracy - 0.05,
   }
 }
+
+/**
+ * High enough that the transform has nothing left to win back. With 8 paired
+ * trials per condition this means at most one miss on the untouched image.
+ */
+const NORMAL_VISION_BASELINE = 0.85
+
+/**
+ * The pass gate asks the personalized transform to BEAT the original image.
+ * For a respondent whose baseline already sits near the ceiling that is
+ * impossible — every run "fails" no matter how many times they retest, and
+ * "建议重新测一次" becomes an infinite loop. A high baseline that the
+ * transform did not meaningfully damage is better read as "this person does
+ * not need enhancement" than as an unstable session.
+ */
+export function looksLikeNormalVision(metrics: ValidationMetrics): boolean {
+  const { original, personalized } = metrics.byCondition
+  return (
+    !metrics.passed &&
+    original.accuracy >= NORMAL_VISION_BASELINE &&
+    personalized.accuracy >= original.accuracy - 0.05 &&
+    personalized.controlAccuracy >= original.controlAccuracy - 0.05
+  )
+}
